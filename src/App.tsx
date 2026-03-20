@@ -6,12 +6,16 @@ import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { AppProvider } from "@/context/AppContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import PageShell from "@/components/PageShell";
+
 import Index from "./pages/Index";
 import TimetablePage from "./pages/Timetable";
 import SubjectsPage from "./pages/Subjects";
 import CalendarPage from "./pages/Calendar";
 import SettingsPage from "./pages/Settings";
-import SettingsSemester from "./pages/settings/SettingsSemester";
+
+import SettingsHolidays from "./pages/settings/SettingsHolidays";
+import SettingsSemester from "./pages/settings/SettingsSemester"; // ✅ ADDED
+
 import NotFound from "./pages/NotFound";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +23,6 @@ import { Button } from "@/components/ui/button";
 const queryClient = new QueryClient();
 
 // ── Placeholder factory ───────────────────────────────────────────────────────
-// Renders until real logic is moved into each sub-page.
 
 function SettingsPlaceholder({ title }: { title: string }) {
   const navigate = useNavigate();
@@ -70,10 +73,10 @@ const App = () => (
 
               {/* ── Settings ── */}
               <Route path="/settings" element={<SettingsPage />} />
-              <Route
-                path="/settings/semester"
-                element={<SettingsPlaceholder title="Semester" />}
-              />
+
+              {/* ✅ FIXED: Semester now real page */}
+              <Route path="/settings/semester" element={<SettingsSemester />} />
+
               <Route
                 path="/settings/subjects"
                 element={<SettingsPlaceholder title="Subjects" />}
@@ -82,7 +85,13 @@ const App = () => (
                 path="/settings/timetable"
                 element={<SettingsPlaceholder title="Timetable" />}
               />
-              <Route path="/settings/holidays" element={<SettingsHolidays />} />
+
+              {/* Already real */}
+              <Route
+                path="/settings/holidays"
+                element={<SettingsHolidays />}
+              />
+
               <Route
                 path="/settings/notifications"
                 element={<SettingsPlaceholder title="Notifications" />}
