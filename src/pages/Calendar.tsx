@@ -103,23 +103,31 @@ interface DayInfo {
 function pastDayInfo(
   dateStr: string,
   daySlots: TimetableSlot[],
-  records: AttendanceRecord[]
+  records: AttendanceRecord[],
 ): DayInfo {
   const extraRecs = records.filter((r) => r.date === dateStr && r.isExtra);
   const slotRecs = daySlots
     .map((s) =>
       records.find(
-        (r) => r.subjectId === s.subjectId && r.date === dateStr && r.slotId === s.id
-      )
+        (r) =>
+          r.subjectId === s.subjectId &&
+          r.date === dateStr &&
+          r.slotId === s.id,
+      ),
     )
     .filter((r): r is AttendanceRecord => !!r);
 
   const allRecs = [...slotRecs, ...extraRecs];
-  if (daySlots.length === 0 && extraRecs.length === 0) return { state: "GREY", badge: "", bunkBuffer: null };
+  if (daySlots.length === 0 && extraRecs.length === 0)
+    return { state: "GREY", badge: "", bunkBuffer: null };
 
   const active = allRecs.filter((r) => r.status !== "CANCELLED");
   if (active.length === 0) {
-    return { state: "GREY", badge: allRecs.length > 0 ? "C" : "", bunkBuffer: null };
+    return {
+      state: "GREY",
+      badge: allRecs.length > 0 ? "C" : "",
+      bunkBuffer: null,
+    };
   }
 
   const allP = active.every((r) => r.status === "PRESENT");
@@ -134,9 +142,10 @@ function futureDayInfo(
   pred: DayPrediction | undefined,
   records: AttendanceRecord[],
   subjectMap: Map<string, Subject>,
-  filterSubjectId: string
+  filterSubjectId: string,
 ): DayInfo {
-  if (daySlots.length === 0) return { state: "GREY", badge: "", bunkBuffer: null };
+  if (daySlots.length === 0)
+    return { state: "GREY", badge: "", bunkBuffer: null };
 
   let state: DayState = "GREY";
   if (pred) {
@@ -147,7 +156,10 @@ function futureDayInfo(
     if (cps.length > 0) {
       let worst: DayState = "GREEN";
       for (const cp of cps) {
-        if (cp.skipState === "RED") { worst = "RED"; break; }
+        if (cp.skipState === "RED") {
+          worst = "RED";
+          break;
+        }
         if (cp.skipState === "YELLOW") worst = "YELLOW";
       }
       state = worst;
@@ -156,7 +168,10 @@ function futureDayInfo(
 
   const weightBySubject = new Map<string, number>();
   for (const s of daySlots) {
-    weightBySubject.set(s.subjectId, (weightBySubject.get(s.subjectId) || 0) + s.weight);
+    weightBySubject.set(
+      s.subjectId,
+      (weightBySubject.get(s.subjectId) || 0) + s.weight,
+    );
   }
   let minBuf = Infinity;
   for (const [sid, w] of weightBySubject) {
@@ -175,12 +190,13 @@ function computeProgress(
   semester: { startDate: string; endDate: string },
   timetable: TimetableSlot[],
   holidays: { date: string }[],
-  examPeriods: { startDate: string; endDate: string }[]
+  examPeriods: { startDate: string; endDate: string }[],
 ): { completed: number; total: number } {
   const holidaySet = new Set(holidays.map((h) => h.date));
   const slotDows = new Set(timetable.map((s) => s.dayOfWeek));
   const today = getTodayStr();
-  let total = 0, completed = 0;
+  let total = 0,
+    completed = 0;
   const start = parseDate(semester.startDate);
   const end = parseDate(semester.endDate);
   const cur = new Date(start);
@@ -212,7 +228,7 @@ function buildChainedPredictions(
   records: AttendanceRecord[],
   holidays: Set<string>,
   examPeriods: { startDate: string; endDate: string }[],
-  semester: { startDate: string; endDate: string }
+  semester: { startDate: string; endDate: string },
 ): Map<string, DayPrediction> {
   const map = new Map<string, DayPrediction>();
   if (subjects.length === 0) return map;
@@ -262,7 +278,12 @@ function buildChainedPredictions(
       continue;
     }
 
-    const classPredictions: { slotId: string; subjectId: string; weight: number; skipState: DayState }[] = [];
+    const classPredictions: {
+      slotId: string;
+      subjectId: string;
+      weight: number;
+      skipState: DayState;
+    }[] = [];
     let dayState: DayState = "GREEN";
 
     for (const slot of daySlots) {
@@ -273,10 +294,17 @@ function buildChainedPredictions(
       const hypPct = hypTotal > 0 ? (rt.attended / hypTotal) * 100 : 100;
       let skipState: DayState = "GREEN";
       if (hypPct < subject.minimumRequiredPercentage) skipState = "RED";
-      else if (hypPct < subject.minimumRequiredPercentage + 3) skipState = "YELLOW";
-      classPredictions.push({ slotId: slot.id, subjectId: slot.subjectId, weight: slot.weight, skipState });
+      else if (hypPct < subject.minimumRequiredPercentage + 3)
+        skipState = "YELLOW";
+      classPredictions.push({
+        slotId: slot.id,
+        subjectId: slot.subjectId,
+        weight: slot.weight,
+        skipState,
+      });
       if (skipState === "RED") dayState = "RED";
-      else if (skipState === "YELLOW" && dayState !== "RED") dayState = "YELLOW";
+      else if (skipState === "YELLOW" && dayState !== "RED")
+        dayState = "YELLOW";
     }
 
     map.set(ds, { date: ds, state: dayState, classPredictions });
@@ -296,12 +324,19 @@ function buildChainedPredictions(
 
 export default function CalendarPage() {
   const {
-    subjects, timetable, records,
+    subjects,
+    timetable,
+    records,
     allHolidays: holidays,
     holidays: manualHolidays,
-    examPeriods, semester,
-    markAttendance, clearMark, addExtraClass, deleteExtraClass,
-    deleteAutoHoliday, setHolidays,
+    examPeriods,
+    semester,
+    markAttendance,
+    clearMark,
+    addExtraClass,
+    deleteExtraClass,
+    deleteAutoHoliday,
+    setHolidays,
   } = useAppState();
 
   const [viewDate, setViewDate] = useState(() => new Date());
@@ -328,9 +363,18 @@ export default function CalendarPage() {
   const month = viewDate.getMonth();
   const today = getTodayStr();
 
-  const subjectMap = useMemo(() => new Map(subjects.map((s) => [s.id, s])), [subjects]);
-  const holidaySet = useMemo(() => new Set(holidays.map((h) => h.date)), [holidays]);
-  const holidayMap = useMemo(() => new Map(holidays.map((h) => [h.date, h])), [holidays]);
+  const subjectMap = useMemo(
+    () => new Map(subjects.map((s) => [s.id, s])),
+    [subjects],
+  );
+  const holidaySet = useMemo(
+    () => new Set(holidays.map((h) => h.date)),
+    [holidays],
+  );
+  const holidayMap = useMemo(
+    () => new Map(holidays.map((h) => [h.date, h])),
+    [holidays],
+  );
 
   const slotsByDow = useMemo(() => {
     const m = new Map<number, TimetableSlot[]>();
@@ -343,46 +387,85 @@ export default function CalendarPage() {
   }, [timetable]);
 
   const predictions = useMemo(() => {
-    return buildChainedPredictions(today, subjects, timetable, records, holidaySet, examPeriods, semester);
+    return buildChainedPredictions(
+      today,
+      subjects,
+      timetable,
+      records,
+      holidaySet,
+      examPeriods,
+      semester,
+    );
   }, [today, subjects, timetable, records, holidaySet, examPeriods, semester]);
 
   const progress = useMemo(
     () => computeProgress(semester, timetable, holidays, examPeriods),
-    [semester, timetable, holidays, examPeriods]
+    [semester, timetable, holidays, examPeriods],
   );
 
   const bunkStats = useMemo(
-    () => subjects.map((s) => {
-      const stats = computeAttendanceStats(s, records);
-      return { id: s.id, name: s.name, percentage: stats.percentage, minimum: s.minimumRequiredPercentage, bunkBuffer: stats.bunkBuffer, mustAttendNext: stats.mustAttendNext };
-    }),
-    [subjects, records]
+    () =>
+      subjects.map((s) => {
+        const stats = computeAttendanceStats(s, records);
+        return {
+          id: s.id,
+          name: s.name,
+          percentage: stats.percentage,
+          minimum: s.minimumRequiredPercentage,
+          bunkBuffer: stats.bunkBuffer,
+          mustAttendNext: stats.mustAttendNext,
+        };
+      }),
+    [subjects, records],
   );
 
   const getDaySlots = useCallback(
     (dateStr: string) => {
       const dow = getDow(dateStr);
       let slots = slotsByDow.get(dow) ?? [];
-      if (filterSubjectId !== "all") slots = slots.filter((s) => s.subjectId === filterSubjectId);
+      if (filterSubjectId !== "all")
+        slots = slots.filter((s) => s.subjectId === filterSubjectId);
       return slots.sort((a, b) => a.startTime.localeCompare(b.startTime));
     },
-    [slotsByDow, filterSubjectId]
+    [slotsByDow, filterSubjectId],
   );
 
   const getDayInfo = useCallback(
     (dateStr: string): DayInfo => {
       if (dateStr < semester.startDate || dateStr > semester.endDate)
         return { state: "GREY", badge: "", bunkBuffer: null };
-      if (holidaySet.has(dateStr)) return { state: "GREY", badge: "", bunkBuffer: null };
-      if (examPeriods.some((ep) => dateStr >= ep.startDate && dateStr <= ep.endDate))
+      if (holidaySet.has(dateStr))
+        return { state: "GREY", badge: "", bunkBuffer: null };
+      if (
+        examPeriods.some(
+          (ep) => dateStr >= ep.startDate && dateStr <= ep.endDate,
+        )
+      )
         return { state: "BLUE", badge: "", bunkBuffer: null };
       const d = parseDate(dateStr);
-      if (d.getDay() === 0) return { state: "GREY", badge: "", bunkBuffer: null };
+      if (d.getDay() === 0)
+        return { state: "GREY", badge: "", bunkBuffer: null };
       const daySlots = getDaySlots(dateStr);
       if (dateStr <= today) return pastDayInfo(dateStr, daySlots, records);
-      return futureDayInfo(daySlots, predictions.get(dateStr), records, subjectMap, filterSubjectId);
+      return futureDayInfo(
+        daySlots,
+        predictions.get(dateStr),
+        records,
+        subjectMap,
+        filterSubjectId,
+      );
     },
-    [semester, holidaySet, examPeriods, getDaySlots, today, records, predictions, subjectMap, filterSubjectId]
+    [
+      semester,
+      holidaySet,
+      examPeriods,
+      getDaySlots,
+      today,
+      records,
+      predictions,
+      subjectMap,
+      filterSubjectId,
+    ],
   );
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -391,17 +474,33 @@ export default function CalendarPage() {
     return d === 0 ? 6 : d - 1;
   })();
 
-  const prev = () => { setViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)); setSelectedDate(null); };
-  const next = () => { setViewDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)); setSelectedDate(null); };
+  const prev = () => {
+    setViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    setSelectedDate(null);
+  };
+  const next = () => {
+    setViewDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+    setSelectedDate(null);
+  };
 
-  const monthName = viewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const monthName = viewDate.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
 
   const selectedIsPast = selectedDate ? selectedDate <= today : false;
-  const selectedHoliday = selectedDate ? (holidayMap.get(selectedDate) ?? null) : null;
+  const selectedHoliday = selectedDate
+    ? (holidayMap.get(selectedDate) ?? null)
+    : null;
   const selectedSlots = selectedDate ? getDaySlots(selectedDate) : [];
   const selectedPred = selectedDate ? predictions.get(selectedDate) : undefined;
 
-  const handleMark = (subjectId: string, slotId: string, weight: number, status: AttendanceStatus) => {
+  const handleMark = (
+    subjectId: string,
+    slotId: string,
+    weight: number,
+    status: AttendanceStatus,
+  ) => {
     if (!selectedDate) return;
     markAttendance(subjectId, selectedDate, slotId, weight, status);
   };
@@ -410,7 +509,9 @@ export default function CalendarPage() {
     clearMark(subjectId, selectedDate, slotId);
   };
   const bulkMark = (status: AttendanceStatus) => {
-    selectedSlots.forEach((s) => handleMark(s.subjectId, s.id, s.weight, status));
+    selectedSlots.forEach((s) =>
+      handleMark(s.subjectId, s.id, s.weight, status),
+    );
   };
   const bulkClear = () => {
     selectedSlots.forEach((s) => handleClear(s.subjectId, s.id));
@@ -438,15 +539,18 @@ export default function CalendarPage() {
   };
 
   // ── Long press handlers (mobile) ─────────────────────────
-  const handleTouchStart = useCallback((dateStr: string) => {
-    if (!holidaySet.has(dateStr)) return;
-    longPressTriggered.current = false;
-    longPressTimer.current = setTimeout(() => {
-      longPressTriggered.current = true;
-      const h = holidayMap.get(dateStr);
-      if (h) openDeleteConfirm(h);
-    }, 600);
-  }, [holidaySet, holidayMap, openDeleteConfirm]);
+  const handleTouchStart = useCallback(
+    (dateStr: string) => {
+      if (!holidaySet.has(dateStr)) return;
+      longPressTriggered.current = false;
+      longPressTimer.current = setTimeout(() => {
+        longPressTriggered.current = true;
+        const h = holidayMap.get(dateStr);
+        if (h) openDeleteConfirm(h);
+      }, 600);
+    },
+    [holidaySet, holidayMap, openDeleteConfirm],
+  );
 
   const handleTouchEnd = useCallback(() => {
     if (longPressTimer.current) {
@@ -467,7 +571,9 @@ export default function CalendarPage() {
             <SelectContent>
               <SelectItem value="all">All subjects</SelectItem>
               {subjects.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -482,38 +588,61 @@ export default function CalendarPage() {
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground font-mono">
               <span>Semester progress</span>
-              <span>{progress.completed} / {progress.total} class days</span>
+              <span>
+                {progress.completed} / {progress.total} class days
+              </span>
             </div>
-            <Progress value={(progress.completed / progress.total) * 100} className="h-2" />
+            <Progress
+              value={(progress.completed / progress.total) * 100}
+              className="h-2"
+            />
           </div>
         )}
 
         {/* Bunk budget */}
         {bunkStats.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-3 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bunk Budget</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Bunk Budget
+            </p>
             <div className="space-y-2">
               {bunkStats.map((s) => {
-                const isRed    = s.percentage < s.minimum;
+                const isRed = s.percentage < s.minimum;
                 const isYellow = !isRed && s.percentage < s.minimum + 3;
-                const barColor = isRed ? "bg-attendance-red" : isYellow ? "bg-attendance-yellow" : "bg-attendance-green";
+                const barColor = isRed
+                  ? "bg-attendance-red"
+                  : isYellow
+                    ? "bg-attendance-yellow"
+                    : "bg-attendance-green";
                 const pctClamped = Math.min(100, Math.max(0, s.percentage));
                 return (
                   <div key={s.id} className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-card-foreground truncate max-w-[55%]">{s.name}</span>
+                      <span className="text-xs font-medium text-card-foreground truncate max-w-[55%]">
+                        {s.name}
+                      </span>
                       <span className="text-xs font-mono text-muted-foreground">
                         {s.percentage.toFixed(1)}%{" "}
                         {s.bunkBuffer > 0 ? (
-                          <span className="text-attendance-green font-semibold">· skip {s.bunkBuffer} more</span>
+                          <span className="text-attendance-green font-semibold">
+                            · skip {s.bunkBuffer} more
+                          </span>
                         ) : s.mustAttendNext > 0 ? (
-                          <span className="text-attendance-red font-semibold">· attend next {s.mustAttendNext}</span>
+                          <span className="text-attendance-red font-semibold">
+                            · attend next {s.mustAttendNext}
+                          </span>
                         ) : null}
                       </span>
                     </div>
                     <div className="relative h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div className={`absolute left-0 top-0 h-full rounded-full transition-all ${barColor}`} style={{ width: `${pctClamped}%` }} />
-                      <div className="absolute top-0 h-full w-px bg-foreground/40" style={{ left: `${s.minimum}%` }} />
+                      <div
+                        className={`absolute left-0 top-0 h-full rounded-full transition-all ${barColor}`}
+                        style={{ width: `${pctClamped}%` }}
+                      />
+                      <div
+                        className="absolute top-0 h-full w-px bg-foreground/40"
+                        style={{ left: `${s.minimum}%` }}
+                      />
                     </div>
                   </div>
                 );
@@ -524,21 +653,32 @@ export default function CalendarPage() {
 
         {/* Month navigation */}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={prev}><ChevronLeft className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={prev}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
           <span className="font-semibold text-foreground">{monthName}</span>
-          <Button variant="ghost" size="sm" onClick={next}><ChevronRight className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={next}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Day headers */}
         <div className="grid grid-cols-7 gap-1">
           {DAY_LABELS.map((d) => (
-            <div key={d} className="text-center text-[10px] font-medium uppercase tracking-wider text-muted-foreground py-1">{d}</div>
+            <div
+              key={d}
+              className="text-center text-[10px] font-medium uppercase tracking-wider text-muted-foreground py-1"
+            >
+              {d}
+            </div>
           ))}
         </div>
 
         {/* Calendar grid */}
         <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: startDow }).map((_, i) => <div key={`e-${i}`} />)}
+          {Array.from({ length: startDow }).map((_, i) => (
+            <div key={`e-${i}`} />
+          ))}
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1;
             const dateStr = fmtDate(year, month, day);
@@ -546,8 +686,11 @@ export default function CalendarPage() {
             const isToday = dateStr === today;
             const isHoliday = holidaySet.has(dateStr);
             const daySlots = getDaySlots(dateStr);
-            const hasExtras = records.some((r) => r.date === dateStr && r.isExtra);
-            const inSemester = dateStr >= semester.startDate && dateStr <= semester.endDate;
+            const hasExtras = records.some(
+              (r) => r.date === dateStr && r.isExtra,
+            );
+            const inSemester =
+              dateStr >= semester.startDate && dateStr <= semester.endDate;
             const isWeekday = parseDate(dateStr).getDay() !== 0;
             const clickable =
               isHoliday ||
@@ -567,77 +710,145 @@ export default function CalendarPage() {
                     onTouchEnd={handleTouchEnd}
                     onTouchMove={handleTouchEnd}
                     className={`relative aspect-square flex items-center justify-center rounded-2xl text-xs font-mono font-medium transition-colors ${CELL_COLORS[info.state]} ${
-                      isToday ? "ring-2 ring-ring ring-offset-1 ring-offset-background" : ""
+                      isToday
+                        ? "ring-2 ring-ring ring-offset-1 ring-offset-background"
+                        : ""
                     } ${clickable ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
                   >
                     {day}
                     {info.badge && (
-                      <span className="absolute top-0.5 right-0.5 text-[8px] font-bold leading-none opacity-80">{info.badge}</span>
+                      <span className="absolute top-0.5 right-0.5 text-[8px] font-bold leading-none opacity-80">
+                        {info.badge}
+                      </span>
                     )}
                     {info.bunkBuffer !== null && (
-                      <span className="absolute bottom-0 left-0.5 text-[8px] font-bold leading-none opacity-70">{info.bunkBuffer}</span>
+                      <span className="absolute bottom-0 left-0.5 text-[8px] font-bold leading-none opacity-70">
+                        {info.bunkBuffer}
+                      </span>
                     )}
                   </button>
                 </TooltipTrigger>
                 {(daySlots.length > 0 ||
                   isHoliday ||
-                  examPeriods.some((ep) => dateStr >= ep.startDate && dateStr <= ep.endDate)) && (
+                  examPeriods.some(
+                    (ep) => dateStr >= ep.startDate && dateStr <= ep.endDate,
+                  )) && (
                   <TooltipContent side="top" className="max-w-[240px]">
                     <p className="font-semibold text-xs mb-1.5">{dateStr}</p>
 
                     {isHoliday && (
                       <div className="text-[11px] flex items-center gap-1.5 text-muted-foreground">
                         <span>🎉</span>
-                        <span>{holidayMap.get(dateStr)?.name ?? "Holiday"}</span>
+                        <span>
+                          {holidayMap.get(dateStr)?.name ?? "Holiday"}
+                        </span>
                       </div>
                     )}
 
-                    {!isHoliday && examPeriods.some((ep) => dateStr >= ep.startDate && dateStr <= ep.endDate) && (
-                      <div className="text-[11px] flex items-center gap-1.5 text-muted-foreground">
-                        <span>📝</span>
-                        <span>Exam period — no classes</span>
-                      </div>
-                    )}
+                    {!isHoliday &&
+                      examPeriods.some(
+                        (ep) =>
+                          dateStr >= ep.startDate && dateStr <= ep.endDate,
+                      ) && (
+                        <div className="text-[11px] flex items-center gap-1.5 text-muted-foreground">
+                          <span>📝</span>
+                          <span>Exam period — no classes</span>
+                        </div>
+                      )}
 
-                    {daySlots.length > 0 && daySlots.map((slot) => {
-                      const sub = subjectMap.get(slot.subjectId);
-                      if (!sub) return null;
-                      const isPast = dateStr <= today;
+                    {daySlots.length > 0 &&
+                      daySlots.map((slot) => {
+                        const sub = subjectMap.get(slot.subjectId);
+                        if (!sub) return null;
+                        const isPast = dateStr <= today;
 
-                      if (isPast) {
-                        const rec = records.find((r) => r.subjectId === slot.subjectId && r.date === dateStr && r.slotId === slot.id);
+                        if (isPast) {
+                          const rec = records.find(
+                            (r) =>
+                              r.subjectId === slot.subjectId &&
+                              r.date === dateStr &&
+                              r.slotId === slot.id,
+                          );
+                          return (
+                            <div
+                              key={slot.id}
+                              className="text-[11px] flex justify-between gap-2"
+                            >
+                              <span>
+                                {sub.name}
+                                {slot.weight === 3 ? " 🔬" : ""}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {rec
+                                  ? rec.status.charAt(0) +
+                                    rec.status.slice(1).toLowerCase()
+                                  : "—"}
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        const subjectRecords = records.filter(
+                          (r) =>
+                            r.subjectId === slot.subjectId &&
+                            r.status !== "CANCELLED",
+                        );
+                        const curTotal = subjectRecords.reduce(
+                          (s, r) => s + r.weightSnapshot,
+                          0,
+                        );
+                        const curAttended = subjectRecords
+                          .filter((r) => r.status === "PRESENT")
+                          .reduce((s, r) => s + r.weightSnapshot, 0);
+                        const curPct =
+                          curTotal > 0 ? (curAttended / curTotal) * 100 : 100;
+                        const skipPct =
+                          curTotal + slot.weight > 0
+                            ? (curAttended / (curTotal + slot.weight)) * 100
+                            : 100;
+                        const cp = predictions
+                          .get(dateStr)
+                          ?.classPredictions?.find((c) => c.slotId === slot.id);
+                        const skipColor =
+                          cp?.skipState === "RED"
+                            ? "text-attendance-red"
+                            : cp?.skipState === "YELLOW"
+                              ? "text-attendance-yellow"
+                              : "text-attendance-green";
+                        const skipLabel =
+                          cp?.skipState === "RED"
+                            ? "Must attend"
+                            : cp?.skipState === "YELLOW"
+                              ? "Borderline"
+                              : "Safe to skip";
+
                         return (
-                          <div key={slot.id} className="text-[11px] flex justify-between gap-2">
-                            <span>{sub.name}{slot.weight === 3 ? " 🔬" : ""}</span>
-                            <span className="text-muted-foreground">
-                              {rec ? rec.status.charAt(0) + rec.status.slice(1).toLowerCase() : "—"}
-                            </span>
+                          <div
+                            key={slot.id}
+                            className="text-[11px] space-y-0.5 mb-1.5 last:mb-0"
+                          >
+                            <div className="flex justify-between gap-2">
+                              <span className="font-semibold">
+                                {sub.name}
+                                {slot.weight === 3 ? " 🔬" : ""}
+                              </span>
+                              <span className={`font-semibold ${skipColor}`}>
+                                {skipLabel}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-2 text-muted-foreground">
+                              <span>If skipped:</span>
+                              <span>
+                                {curPct.toFixed(1)}% →{" "}
+                                <span className={skipColor}>
+                                  {skipPct.toFixed(1)}%
+                                </span>{" "}
+                                (min {sub.minimumRequiredPercentage}%)
+                              </span>
+                            </div>
                           </div>
                         );
-                      }
-
-                      const subjectRecords = records.filter((r) => r.subjectId === slot.subjectId && r.status !== "CANCELLED");
-                      const curTotal    = subjectRecords.reduce((s, r) => s + r.weightSnapshot, 0);
-                      const curAttended = subjectRecords.filter((r) => r.status === "PRESENT").reduce((s, r) => s + r.weightSnapshot, 0);
-                      const curPct  = curTotal > 0 ? (curAttended / curTotal) * 100 : 100;
-                      const skipPct = (curTotal + slot.weight) > 0 ? (curAttended / (curTotal + slot.weight)) * 100 : 100;
-                      const cp = predictions.get(dateStr)?.classPredictions?.find((c) => c.slotId === slot.id);
-                      const skipColor = cp?.skipState === "RED" ? "text-attendance-red" : cp?.skipState === "YELLOW" ? "text-attendance-yellow" : "text-attendance-green";
-                      const skipLabel = cp?.skipState === "RED" ? "Must attend" : cp?.skipState === "YELLOW" ? "Borderline" : "Safe to skip";
-
-                      return (
-                        <div key={slot.id} className="text-[11px] space-y-0.5 mb-1.5 last:mb-0">
-                          <div className="flex justify-between gap-2">
-                            <span className="font-semibold">{sub.name}{slot.weight === 3 ? " 🔬" : ""}</span>
-                            <span className={`font-semibold ${skipColor}`}>{skipLabel}</span>
-                          </div>
-                          <div className="flex justify-between gap-2 text-muted-foreground">
-                            <span>If skipped:</span>
-                            <span>{curPct.toFixed(1)}% → <span className={skipColor}>{skipPct.toFixed(1)}%</span>{" "}(min {sub.minimumRequiredPercentage}%)</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                      })}
                   </TooltipContent>
                 )}
               </Tooltip>
@@ -647,7 +858,15 @@ export default function CalendarPage() {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-3 justify-center">
-          {([["GREEN","Safe / All present"],["YELLOW","Warning / Near limit"],["RED","Danger / Below minimum"],["GREY","Off / Holiday"],["BLUE","Exam period"]] as const).map(([st, label]) => (
+          {(
+            [
+              ["GREEN", "Safe / All present"],
+              ["YELLOW", "Warning / Near limit"],
+              ["RED", "Danger / Below minimum"],
+              ["GREY", "Off / Holiday"],
+              ["BLUE", "Exam period"],
+            ] as const
+          ).map(([st, label]) => (
             <div key={st} className="flex items-center gap-1.5">
               <div className={`h-3 w-3 rounded-sm ${CELL_COLORS[st]}`} />
               <span className="text-xs text-muted-foreground">{label}</span>
@@ -657,8 +876,13 @@ export default function CalendarPage() {
       </div>
 
       {/* ── Past day edit modal ──────────────────────────────── */}
-      <Dialog open={selectedDate !== null && selectedIsPast} onOpenChange={(o) => { if (!o) setSelectedDate(null); }}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <Dialog
+        open={selectedDate !== null && selectedIsPast}
+        onOpenChange={(o) => {
+          if (!o) setSelectedDate(null);
+        }}
+      >
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto pb-20">
           <DialogHeader>
             <DialogTitle className="font-mono">{selectedDate}</DialogTitle>
           </DialogHeader>
@@ -682,46 +906,131 @@ export default function CalendarPage() {
           )}
 
           {(() => {
-            const extraRecs = selectedDate ? records.filter((r) => r.date === selectedDate && r.isExtra) : [];
+            const extraRecs = selectedDate
+              ? records.filter((r) => r.date === selectedDate && r.isExtra)
+              : [];
             const hasContent = selectedSlots.length > 0 || extraRecs.length > 0;
 
             return hasContent ? (
               <>
                 {selectedSlots.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
-                    <Button size="sm" variant="outline" onClick={() => bulkMark("PRESENT")}><Check className="h-3.5 w-3.5 mr-1" />All Present</Button>
-                    <Button size="sm" variant="outline" onClick={() => bulkMark("ABSENT")}><X className="h-3.5 w-3.5 mr-1" />All Absent</Button>
-                    <Button size="sm" variant="outline" onClick={() => bulkMark("CANCELLED")}><Ban className="h-3.5 w-3.5 mr-1" />All Cancelled</Button>
-                    <Button size="sm" variant="ghost" onClick={bulkClear}><Eraser className="h-3.5 w-3.5 mr-1" />Clear all</Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => bulkMark("PRESENT")}
+                    >
+                      <Check className="h-3.5 w-3.5 mr-1" />
+                      All Present
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => bulkMark("ABSENT")}
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      All Absent
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => bulkMark("CANCELLED")}
+                    >
+                      <Ban className="h-3.5 w-3.5 mr-1" />
+                      All Cancelled
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={bulkClear}>
+                      <Eraser className="h-3.5 w-3.5 mr-1" />
+                      Clear all
+                    </Button>
                   </div>
                 )}
                 <div className="space-y-3">
                   {selectedSlots.map((slot) => {
                     const sub = subjectMap.get(slot.subjectId);
                     if (!sub) return null;
-                    const rec = records.find((r) => r.subjectId === slot.subjectId && r.date === selectedDate && r.slotId === slot.id);
+                    const rec = records.find(
+                      (r) =>
+                        r.subjectId === slot.subjectId &&
+                        r.date === selectedDate &&
+                        r.slotId === slot.id,
+                    );
                     return (
-                      <div key={slot.id} className="rounded-lg border border-border p-3 space-y-2">
+                      <div
+                        key={slot.id}
+                        className="rounded-lg border border-border p-3 space-y-2"
+                      >
                         <div className="flex items-center justify-between">
                           <div>
-                            <span className="font-semibold text-sm text-card-foreground">{sub.name}</span>
-                            {slot.weight === 3 && <Badge variant="secondary" className="ml-2 text-[10px]">LAB</Badge>}
+                            <span className="font-semibold text-sm text-card-foreground">
+                              {sub.name}
+                            </span>
+                            {slot.weight === 3 && (
+                              <Badge
+                                variant="secondary"
+                                className="ml-2 text-[10px]"
+                              >
+                                LAB
+                              </Badge>
+                            )}
                           </div>
-                          <span className="text-xs text-muted-foreground font-mono">{slot.startTime}–{slot.endTime}</span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {slot.startTime}–{slot.endTime}
+                          </span>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Status: <span className="font-medium text-foreground">{rec ? rec.status.charAt(0) + rec.status.slice(1).toLowerCase() : "Not marked"}</span>
+                          Status:{" "}
+                          <span className="font-medium text-foreground">
+                            {rec
+                              ? rec.status.charAt(0) +
+                                rec.status.slice(1).toLowerCase()
+                              : "Not marked"}
+                          </span>
                         </div>
-                        <div className="flex gap-1.5">
-                          {(["PRESENT", "ABSENT", "CANCELLED"] as const).map((st) => (
-                            <Button key={st} size="sm" variant={rec?.status === st ? "default" : "outline"} className={`text-xs ${rec?.status === st ? STATUS_STYLES[st] : ""}`} onClick={() => handleMark(slot.subjectId, slot.id, slot.weight, st)}>
-                              {st === "PRESENT" && <Check className="h-3 w-3 mr-0.5" />}
-                              {st === "ABSENT" && <X className="h-3 w-3 mr-0.5" />}
-                              {st === "CANCELLED" && <Ban className="h-3 w-3 mr-0.5" />}
-                              {st.charAt(0) + st.slice(1).toLowerCase()}
+                        <div className="flex flex-wrap gap-1.5">
+                          {(["PRESENT", "ABSENT", "CANCELLED"] as const).map(
+                            (st) => (
+                              <Button
+                                key={st}
+                                size="sm"
+                                variant={
+                                  rec?.status === st ? "default" : "outline"
+                                }
+                                className={`flex-1 min-w-[30%] text-xs ${rec?.status === st ? STATUS_STYLES[st] : ""}`}
+                                onClick={() =>
+                                  handleMark(
+                                    slot.subjectId,
+                                    slot.id,
+                                    slot.weight,
+                                    st,
+                                  )
+                                }
+                              >
+                                {st === "PRESENT" && (
+                                  <Check className="h-3 w-3 mr-0.5" />
+                                )}
+                                {st === "ABSENT" && (
+                                  <X className="h-3 w-3 mr-0.5" />
+                                )}
+                                {st === "CANCELLED" && (
+                                  <Ban className="h-3 w-3 mr-0.5" />
+                                )}
+                                {st.charAt(0) + st.slice(1).toLowerCase()}
+                              </Button>
+                            ),
+                          )}
+                          {rec && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="flex-1 min-w-[30%]"
+                              onClick={() =>
+                                handleClear(slot.subjectId, slot.id)
+                              }
+                            >
+                              <Eraser className="h-3 w-3" />
                             </Button>
-                          ))}
-                          {rec && <Button size="sm" variant="ghost" onClick={() => handleClear(slot.subjectId, slot.id)}><Eraser className="h-3 w-3" /></Button>}
+                          )}
                         </div>
                       </div>
                     );
@@ -731,44 +1040,103 @@ export default function CalendarPage() {
                     const sub = subjectMap.get(rec.subjectId);
                     if (!sub) return null;
                     return (
-                      <div key={rec.slotId} className="rounded-lg border border-border p-3 space-y-2">
+                      <div
+                        key={rec.slotId}
+                        className="rounded-lg border border-border p-3 space-y-2"
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-card-foreground">{sub.name}</span>
-                            <Badge variant="secondary" className="text-[10px]">Extra</Badge>
-                            {rec.weightSnapshot === 3 && <Badge variant="secondary" className="text-[10px]">LAB</Badge>}
+                            <span className="font-semibold text-sm text-card-foreground">
+                              {sub.name}
+                            </span>
+                            <Badge variant="secondary" className="text-[10px]">
+                              Extra
+                            </Badge>
+                            {rec.weightSnapshot === 3 && (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px]"
+                              >
+                                LAB
+                              </Badge>
+                            )}
                           </div>
-                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive" onClick={() => deleteExtraClass(rec.slotId, rec.date)} title="Delete extra class">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() =>
+                              deleteExtraClass(rec.slotId, rec.date)
+                            }
+                            title="Delete extra class"
+                          >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Status: <span className="font-medium text-foreground">{rec.status.charAt(0) + rec.status.slice(1).toLowerCase()}</span>
+                          Status:{" "}
+                          <span className="font-medium text-foreground">
+                            {rec.status.charAt(0) +
+                              rec.status.slice(1).toLowerCase()}
+                          </span>
                         </div>
-                        <div className="flex gap-1.5">
-                          {(["PRESENT", "ABSENT", "CANCELLED"] as const).map((st) => (
-                            <Button key={st} size="sm" variant={rec.status === st ? "default" : "outline"} className={`text-xs ${rec.status === st ? STATUS_STYLES[st] : ""}`} onClick={() => handleMark(rec.subjectId, rec.slotId, rec.weightSnapshot, st)}>
-                              {st === "PRESENT" && <Check className="h-3 w-3 mr-0.5" />}
-                              {st === "ABSENT" && <X className="h-3 w-3 mr-0.5" />}
-                              {st === "CANCELLED" && <Ban className="h-3 w-3 mr-0.5" />}
-                              {st.charAt(0) + st.slice(1).toLowerCase()}
-                            </Button>
-                          ))}
+                        <div className="flex flex-wrap gap-1.5">
+                          {(["PRESENT", "ABSENT", "CANCELLED"] as const).map(
+                            (st) => (
+                              <Button
+                                key={st}
+                                size="sm"
+                                variant={
+                                  rec.status === st ? "default" : "outline"
+                                }
+                                className={`flex-1 min-w-[30%] text-xs ${rec.status === st ? STATUS_STYLES[st] : ""}`}
+                                onClick={() =>
+                                  handleMark(
+                                    rec.subjectId,
+                                    rec.slotId,
+                                    rec.weightSnapshot,
+                                    st,
+                                  )
+                                }
+                              >
+                                {st === "PRESENT" && (
+                                  <Check className="h-3 w-3 mr-0.5" />
+                                )}
+                                {st === "ABSENT" && (
+                                  <X className="h-3 w-3 mr-0.5" />
+                                )}
+                                {st === "CANCELLED" && (
+                                  <Ban className="h-3 w-3 mr-0.5" />
+                                )}
+                                {st.charAt(0) + st.slice(1).toLowerCase()}
+                              </Button>
+                            ),
+                          )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
 
-                <button onClick={() => setExtraModalOpen(true)} className="flex items-center justify-center gap-2 w-full rounded-lg border border-dashed border-border p-3 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors">
+                <button
+                  onClick={() => setExtraModalOpen(true)}
+                  className="flex items-center justify-center gap-2 w-full rounded-lg border border-dashed border-border p-3 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                >
                   <Plus className="h-4 w-4" />
                   Add extra class
                 </button>
               </>
             ) : (
               <>
-                {!selectedHoliday && <p className="text-sm text-muted-foreground">No classes this day.</p>}
-                <button onClick={() => setExtraModalOpen(true)} className="flex items-center justify-center gap-2 w-full rounded-lg border border-dashed border-border p-3 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors">
+                {!selectedHoliday && (
+                  <p className="text-sm text-muted-foreground">
+                    No classes this day.
+                  </p>
+                )}
+                <button
+                  onClick={() => setExtraModalOpen(true)}
+                  className="flex items-center justify-center gap-2 w-full rounded-lg border border-dashed border-border p-3 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                >
                   <Plus className="h-4 w-4" />
                   Add extra class
                 </button>
@@ -779,14 +1147,24 @@ export default function CalendarPage() {
       </Dialog>
 
       {/* ── Future day preview sheet ─────────────────────────── */}
-      <Sheet open={selectedDate !== null && !selectedIsPast} onOpenChange={(o) => { if (!o) setSelectedDate(null); }}>
-        <SheetContent side="bottom" className="max-h-[60vh] rounded-t-2xl inset-x-4 mx-auto max-w-lg bottom-[20vh]">
+      <Sheet
+        open={selectedDate !== null && !selectedIsPast}
+        onOpenChange={(o) => {
+          if (!o) setSelectedDate(null);
+        }}
+      >
+        <SheetContent
+          side="bottom"
+          className="max-h-[60vh] rounded-t-2xl inset-x-4 mx-auto max-w-lg bottom-[20vh]"
+        >
           <SheetHeader>
             <SheetTitle className="font-mono">
               {(() => {
                 const [y, m, d] = (selectedDate ?? "").split("-").map(Number);
                 const dt = new Date(y, m - 1, d);
-                const dayName = dt.toLocaleDateString("en-US", { weekday: "long" });
+                const dayName = dt.toLocaleDateString("en-US", {
+                  weekday: "long",
+                });
                 return selectedHoliday
                   ? `${dayName}, ${selectedDate}`
                   : `${dayName}, ${selectedDate} — Predictions`;
@@ -813,46 +1191,91 @@ export default function CalendarPage() {
               </div>
             )}
 
-            {!selectedHoliday && selectedPred?.classPredictions
-              .filter((cp) => filterSubjectId === "all" || cp.subjectId === filterSubjectId)
-              .map((cp) => {
-                const sub = subjectMap.get(cp.subjectId);
-                const slot = timetable.find((s) => s.id === cp.slotId);
-                if (!sub) return null;
-                const label = cp.skipState === "RED" ? "Must attend" : cp.skipState === "YELLOW" ? "Recommended" : "Safe to skip";
-                const color = cp.skipState === "RED" ? "text-attendance-red" : cp.skipState === "YELLOW" ? "text-attendance-yellow" : "text-attendance-green";
-                return (
-                  <div key={cp.slotId} className="flex items-center justify-between rounded-lg border border-border p-3">
-                    <div>
-                      <span className="font-semibold text-sm">{sub.name}</span>
-                      {(slot?.weight ?? 1) === 3 && <Badge variant="secondary" className="ml-2 text-[10px]">LAB</Badge>}
-                      {slot && <span className="text-xs text-muted-foreground ml-2 font-mono">{slot.startTime}–{slot.endTime}</span>}
+            {!selectedHoliday &&
+              selectedPred?.classPredictions
+                .filter(
+                  (cp) =>
+                    filterSubjectId === "all" ||
+                    cp.subjectId === filterSubjectId,
+                )
+                .map((cp) => {
+                  const sub = subjectMap.get(cp.subjectId);
+                  const slot = timetable.find((s) => s.id === cp.slotId);
+                  if (!sub) return null;
+                  const label =
+                    cp.skipState === "RED"
+                      ? "Must attend"
+                      : cp.skipState === "YELLOW"
+                        ? "Recommended"
+                        : "Safe to skip";
+                  const color =
+                    cp.skipState === "RED"
+                      ? "text-attendance-red"
+                      : cp.skipState === "YELLOW"
+                        ? "text-attendance-yellow"
+                        : "text-attendance-green";
+                  return (
+                    <div
+                      key={cp.slotId}
+                      className="flex items-center justify-between rounded-lg border border-border p-3"
+                    >
+                      <div>
+                        <span className="font-semibold text-sm">
+                          {sub.name}
+                        </span>
+                        {(slot?.weight ?? 1) === 3 && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-2 text-[10px]"
+                          >
+                            LAB
+                          </Badge>
+                        )}
+                        {slot && (
+                          <span className="text-xs text-muted-foreground ml-2 font-mono">
+                            {slot.startTime}–{slot.endTime}
+                          </span>
+                        )}
+                      </div>
+                      <span className={`text-sm font-semibold ${color}`}>
+                        {label}
+                      </span>
                     </div>
-                    <span className={`text-sm font-semibold ${color}`}>{label}</span>
-                  </div>
-                );
-              })}
+                  );
+                })}
 
-            {!selectedHoliday && (!selectedPred || selectedPred.classPredictions.length === 0) && (
-              <p className="text-sm text-muted-foreground">No predictions available.</p>
-            )}
+            {!selectedHoliday &&
+              (!selectedPred || selectedPred.classPredictions.length === 0) && (
+                <p className="text-sm text-muted-foreground">
+                  No predictions available.
+                </p>
+              )}
           </div>
         </SheetContent>
       </Sheet>
 
       {/* ── Holiday delete confirmation ──────────────────────── */}
-      <Dialog open={deleteTarget !== null} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete holiday?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Delete &ldquo;{deleteTarget?.name || "Holiday"}&rdquo; from holidays?
-            This will restore normal class schedule for this day.
+            Delete &ldquo;{deleteTarget?.name || "Holiday"}&rdquo; from
+            holidays? This will restore normal class schedule for this day.
           </p>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDeleteHoliday}>Delete</Button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteHoliday}>
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
