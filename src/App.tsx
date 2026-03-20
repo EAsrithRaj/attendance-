@@ -11,7 +11,7 @@ import TimetablePage from "./pages/Timetable";
 import SubjectsPage from "./pages/Subjects";
 import CalendarPage from "./pages/Calendar";
 import SettingsPage from "./pages/Settings";
-import SettingsHolidays from "./pages/settings/SettingsHolidays";
+import SettingsSemester from "./pages/settings/SettingsSemester";
 import NotFound from "./pages/NotFound";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,9 @@ function SettingsPlaceholder({ title }: { title: string }) {
           <span className="text-4xl">🚧</span>
         </div>
         <p className="text-base font-semibold text-foreground">{title}</p>
-        <p className="text-sm text-muted-foreground">Coming soon — logic will be moved here.</p>
+        <p className="text-sm text-muted-foreground">
+          Coming soon — logic will be moved here.
+        </p>
       </div>
     </PageShell>
   );
@@ -67,15 +69,36 @@ const App = () => (
               <Route path="/calendar" element={<CalendarPage />} />
 
               {/* ── Settings ── */}
-              <Route path="/settings"              element={<SettingsPage />} />
-              <Route path="/settings/semester"     element={<SettingsPlaceholder title="Semester" />} />
-              <Route path="/settings/subjects"     element={<SettingsPlaceholder title="Subjects" />} />
-              <Route path="/settings/timetable"    element={<SettingsPlaceholder title="Timetable" />} />
-              <Route path="/settings/holidays"     element={<SettingsHolidays />} />
-              <Route path="/settings/notifications" element={<SettingsPlaceholder title="Notifications" />} />
-              <Route path="/settings/data"         element={<SettingsPlaceholder title="Data" />} />
-              <Route path="/settings/appearance"   element={<SettingsPlaceholder title="Appearance" />} />
-              <Route path="/settings/danger"       element={<SettingsPlaceholder title="Danger Zone" />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route
+                path="/settings/semester"
+                element={<SettingsPlaceholder title="Semester" />}
+              />
+              <Route
+                path="/settings/subjects"
+                element={<SettingsPlaceholder title="Subjects" />}
+              />
+              <Route
+                path="/settings/timetable"
+                element={<SettingsPlaceholder title="Timetable" />}
+              />
+              <Route path="/settings/holidays" element={<SettingsHolidays />} />
+              <Route
+                path="/settings/notifications"
+                element={<SettingsPlaceholder title="Notifications" />}
+              />
+              <Route
+                path="/settings/data"
+                element={<SettingsPlaceholder title="Data" />}
+              />
+              <Route
+                path="/settings/appearance"
+                element={<SettingsPlaceholder title="Appearance" />}
+              />
+              <Route
+                path="/settings/danger"
+                element={<SettingsPlaceholder title="Danger Zone" />}
+              />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

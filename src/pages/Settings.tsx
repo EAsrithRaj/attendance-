@@ -48,19 +48,12 @@ export default function SettingsPage() {
     timetable,
     allHolidays,
     examPeriods,
-    semester,
     setSubjects,
     setTimetable,
     setExamPeriods,
-    setSemester,
     resetAll,
     loadTestData,
   } = useAppState();
-
-  // ── Semester ────────────────────────────────────────────────────────────────
-  const [semStart, setSemStart] = useState(semester.startDate);
-  const [semEnd, setSemEnd] = useState(semester.endDate);
-  const saveSem = () => setSemester({ startDate: semStart, endDate: semEnd });
 
   // ── Subject form ────────────────────────────────────────────────────────────
   const [newSubName, setNewSubName] = useState("");
@@ -245,31 +238,6 @@ export default function SettingsPage() {
             )
           )}
         </nav>
-
-        {/* ── Existing UI (temporary, kept below menu) ─── */}
-        <Section title="Semester">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs text-muted-foreground">Start</Label>
-              <Input
-                type="date"
-                value={semStart}
-                onChange={(e) => setSemStart(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">End</Label>
-              <Input
-                type="date"
-                value={semEnd}
-                onChange={(e) => setSemEnd(e.target.value)}
-              />
-            </div>
-          </div>
-          <Button size="sm" onClick={saveSem} className="mt-2 w-full">
-            Save Semester
-          </Button>
-        </Section>
 
         {/* ── Subjects ──────────────────────────────────── */}
         <Section title="Subjects">
