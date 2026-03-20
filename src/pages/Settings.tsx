@@ -26,6 +26,19 @@ import ThemeToggle from "@/components/ThemeToggle";
 import ImportExport from "@/components/ImportExport";
 import { toast } from "sonner";
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function dateRange(start: string, end: string): string[] {
+  const dates: string[] = [];
+  const cur = new Date(start + "T00:00:00");
+  const last = new Date(end + "T00:00:00");
+  while (cur <= last) {
+    dates.push(cur.toISOString().split("T")[0]);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -82,7 +95,10 @@ export default function SettingsPage() {
 
   const addExam = () => {
     if (!examStart || !examEnd) return;
-    setExamPeriods([...examPeriods, { startDate: examStart, endDate: examEnd }]);
+    setExamPeriods([
+      ...examPeriods,
+      { startDate: examStart, endDate: examEnd },
+    ]);
     setExamStart("");
     setExamEnd("");
   };
@@ -147,7 +163,9 @@ export default function SettingsPage() {
       return;
     }
     if (Notification.permission === "denied") {
-      toast.error("Notification permission denied. Enable it in browser settings.");
+      toast.error(
+        "Notification permission denied. Enable it in browser settings.",
+      );
       return;
     }
     if (Notification.permission === "default") {
@@ -175,7 +193,9 @@ export default function SettingsPage() {
   };
 
   const permissionStatus =
-    typeof Notification !== "undefined" ? Notification.permission : "unsupported";
+    typeof Notification !== "undefined"
+      ? Notification.permission
+      : "unsupported";
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -195,12 +215,12 @@ export default function SettingsPage() {
                   i < arr.length - 1 ? "border-b border-border/60" : ""
                 }`}
               >
-                <span
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${item.iconBg}`}
-                >
+                {/* Icon */}
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${item.iconBg}`}>
                   <item.icon className={`h-4 w-4 ${item.iconColor}`} />
                 </span>
 
+                {/* Label + subtitle */}
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-medium text-card-foreground">
                     {item.label}
@@ -212,6 +232,7 @@ export default function SettingsPage() {
                   )}
                 </span>
 
+                {/* Badge + arrow */}
                 <span className="flex items-center gap-2 shrink-0">
                   {item.badge != null && item.badge > 0 && (
                     <span className="text-[11px] font-semibold bg-muted text-muted-foreground rounded-full px-2 py-0.5 leading-none">
@@ -221,11 +242,11 @@ export default function SettingsPage() {
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </span>
               </button>
-            ),
+            )
           )}
         </nav>
 
-        {/* ── Semester ──────────────────────────────────── */}
+        {/* ── Existing UI (temporary, kept below menu) ─── */}
         <Section title="Semester">
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -263,7 +284,11 @@ export default function SettingsPage() {
                   ({s.minimumRequiredPercentage}%)
                 </span>
               </span>
-              <Button variant="ghost" size="sm" onClick={() => removeSubject(s.id)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeSubject(s.id)}
+              >
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
@@ -300,14 +325,20 @@ export default function SettingsPage() {
                 ) : (
                   <BellOff className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span className="text-sm text-card-foreground">Daily Notifications</span>
+                <span className="text-sm text-card-foreground">
+                  Daily Notifications
+                </span>
               </div>
-              <Switch checked={notifsEnabled} onCheckedChange={handleNotifsToggle} />
+              <Switch
+                checked={notifsEnabled}
+                onCheckedChange={handleNotifsToggle}
+              />
             </div>
 
             {permissionStatus === "denied" && (
               <p className="text-xs text-destructive">
-                Notification permission denied. Enable it in your browser/OS settings.
+                Notification permission denied. Enable it in your browser/OS
+                settings.
               </p>
             )}
             {permissionStatus === "default" && (
@@ -319,7 +350,9 @@ export default function SettingsPage() {
             {notifsEnabled && (
               <>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Notification Time</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Notification Time
+                  </Label>
                   <Input
                     type="time"
                     value={notifTime}
@@ -329,16 +362,22 @@ export default function SettingsPage() {
 
                 {subjects.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Include Subjects</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Include Subjects
+                    </Label>
                     {subjects.map((s) => (
                       <div
                         key={s.id}
                         className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2"
                       >
-                        <span className="text-sm text-card-foreground">{s.name}</span>
+                        <span className="text-sm text-card-foreground">
+                          {s.name}
+                        </span>
                         <Switch
                           checked={notifSubjects[s.id] !== false}
-                          onCheckedChange={(checked) => handleSubjectToggle(s.id, checked)}
+                          onCheckedChange={(checked) =>
+                            handleSubjectToggle(s.id, checked)
+                          }
                         />
                       </div>
                     ))}
@@ -358,6 +397,7 @@ export default function SettingsPage() {
             )}
           </div>
         </Section>
+
 
         {/* ── Exam Periods ──────────────────────────────── */}
         <Section title="Exam Periods">
@@ -420,7 +460,13 @@ export default function SettingsPage() {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm animate-fade-in">
       <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
@@ -430,8 +476,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
+}
 
-// ── Menu data ─────────────────────────────────────────────────────────────────
+// ── Settings menu items ───────────────────────────────────────────────────────
 
 interface MenuItem {
   label: string;

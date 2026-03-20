@@ -94,10 +94,8 @@ export default function SettingsHolidays() {
 
   // Grouped display
   const nationalHolidays = allHolidays.filter((h) => h.type === "national");
-  const stateHolidays = allHolidays.filter((h) => h.type === "state");
-  const manualHolidays = allHolidays.filter(
-    (h) => h.type === "manual" || !h.type,
-  );
+  const stateHolidays    = allHolidays.filter((h) => h.type === "state");
+  const manualHolidays   = allHolidays.filter((h) => h.type === "manual" || !h.type);
 
   // Deleted auto holidays — sourced from bundled list, filtered by deletedHolidayIds
   const deletedAutoHolidays = INDIAN_HOLIDAYS.filter((h) =>
@@ -120,6 +118,7 @@ export default function SettingsHolidays() {
       }
     >
       <div className="space-y-4 pb-20 animate-fade-in">
+
         {/* ── State detection banner ── */}
         <div
           className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
@@ -179,8 +178,7 @@ export default function SettingsHolidays() {
             >
               <span>
                 {deletedAutoHolidays.length} auto holiday
-                {deletedAutoHolidays.length !== 1 ? "s" : ""} hidden — tap to
-                restore
+                {deletedAutoHolidays.length !== 1 ? "s" : ""} hidden — tap to restore
               </span>
               {showDeleted ? (
                 <ChevronUp className="h-3.5 w-3.5 shrink-0" />
@@ -199,10 +197,7 @@ export default function SettingsHolidays() {
                     <span className="text-xs text-card-foreground font-mono">
                       {h.date}
                       {h.name && (
-                        <span className="text-muted-foreground">
-                          {" "}
-                          — {h.name}
-                        </span>
+                        <span className="text-muted-foreground"> — {h.name}</span>
                       )}
                     </span>
                     <Button
@@ -231,9 +226,7 @@ export default function SettingsHolidays() {
           </p>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-xs text-muted-foreground">
-                Start date
-              </Label>
+              <Label className="text-xs text-muted-foreground">Start date</Label>
               <Input
                 type="date"
                 value={holStart}
@@ -241,9 +234,7 @@ export default function SettingsHolidays() {
               />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">
-                End (optional)
-              </Label>
+              <Label className="text-xs text-muted-foreground">End (optional)</Label>
               <Input
                 type="date"
                 value={holEnd}
@@ -265,6 +256,7 @@ export default function SettingsHolidays() {
             </Button>
           </div>
         </div>
+
       </div>
     </PageShell>
   );

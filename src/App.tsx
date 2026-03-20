@@ -11,6 +11,7 @@ import TimetablePage from "./pages/Timetable";
 import SubjectsPage from "./pages/Subjects";
 import CalendarPage from "./pages/Calendar";
 import SettingsPage from "./pages/Settings";
+import SettingsHolidays from "./pages/settings/SettingsHolidays";
 import NotFound from "./pages/NotFound";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Button } from "@/components/ui/button";
 const queryClient = new QueryClient();
 
 // ── Placeholder factory ───────────────────────────────────────────────────────
-// Each settings sub-page renders this until real logic is moved in.
+// Renders until real logic is moved into each sub-page.
 
 function SettingsPlaceholder({ title }: { title: string }) {
   const navigate = useNavigate();
@@ -66,15 +67,15 @@ const App = () => (
               <Route path="/calendar" element={<CalendarPage />} />
 
               {/* ── Settings ── */}
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/settings/semester"      element={<SettingsPlaceholder title="Semester" />} />
-              <Route path="/settings/subjects"      element={<SettingsPlaceholder title="Subjects" />} />
-              <Route path="/settings/timetable"     element={<SettingsPlaceholder title="Timetable" />} />
-              <Route path="/settings/holidays"      element={<SettingsPlaceholder title="Holidays" />} />
+              <Route path="/settings"              element={<SettingsPage />} />
+              <Route path="/settings/semester"     element={<SettingsPlaceholder title="Semester" />} />
+              <Route path="/settings/subjects"     element={<SettingsPlaceholder title="Subjects" />} />
+              <Route path="/settings/timetable"    element={<SettingsPlaceholder title="Timetable" />} />
+              <Route path="/settings/holidays"     element={<SettingsHolidays />} />
               <Route path="/settings/notifications" element={<SettingsPlaceholder title="Notifications" />} />
-              <Route path="/settings/data"          element={<SettingsPlaceholder title="Data" />} />
-              <Route path="/settings/appearance"    element={<SettingsPlaceholder title="Appearance" />} />
-              <Route path="/settings/danger"        element={<SettingsPlaceholder title="Danger Zone" />} />
+              <Route path="/settings/data"         element={<SettingsPlaceholder title="Data" />} />
+              <Route path="/settings/appearance"   element={<SettingsPlaceholder title="Appearance" />} />
+              <Route path="/settings/danger"       element={<SettingsPlaceholder title="Danger Zone" />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
