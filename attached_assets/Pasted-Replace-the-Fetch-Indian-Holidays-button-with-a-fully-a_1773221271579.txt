@@ -1,0 +1,80 @@
+Replace the "Fetch Indian Holidays" button with a fully automatic Indian holiday system.
+1. Remove the "Fetch Indian Holidays" button from src/pages/Settings.tsx entirely.
+2. Auto-detect state using IP (no GPS, no permission prompt):
+
+On first app launch, call https://ipapi.co/json/ to get region
+Read the region field from the response (e.g. "Telangana")
+Store in localStorage as userState
+If the API fails or returns non-India, default to national holidays only
+Show a one-time dismissible banner: "Holidays loaded for Telangana"
+
+3. Hardcoded holiday library in src/data/holidays.ts:
+Use this structure:
+tsexport type HolidayEntry = {
+  id: string;
+  date: string; // YYYY-MM-DD
+  name: string;
+  states: string[] | "all";
+  type: "national" | "state" | "manual";
+};
+Include all Indian holidays for 2025-2026 and 2026-2027:
+
+National: Republic Day, Independence Day, Gandhi Jayanti, Christmas, New Year
+Hindu: Holi, Diwali, Dussehra, Ram Navami, Janmashtami, Ganesh Chaturthi, Navratri, Makar Sankranti
+Muslim: Eid ul-Fitr, Eid ul-Adha, Muharram, Milad-un-Nabi
+Christian: Good Friday, Easter
+Sikh: Guru Nanak Jayanti, Baisakhi
+State-specific holidays for: Telangana, Andhra Pradesh, Maharashtra, Karnataka, Tamil Nadu, Kerala, Gujarat, Rajasthan, Uttar Pradesh, Delhi, West Bengal, Punjab, Madhya Pradesh, Bihar
+
+4. Auto-load holidays on app start:
+
+Filter INDIAN_HOLIDAYS by states === "all" OR states.includes(userState)
+Merge with manually added holidays
+Skip any IDs in deletedHolidayIds (stored in localStorage)
+No duplicates
+
+5. Today section:
+
+If today is a holiday, show: "🎉 Holi — Holiday" at the top (not "No classes")
+Subject cards still show below but greyed out
+Show a small trash icon next to the holiday name for deletion
+On delete: show confirmation popup "Delete this holiday?" → on confirm, add its id to deletedHolidayIds in localStorage and restore normal subject cards
+
+6. Calendar section:
+
+Tapping a holiday day shows: "🎉 Holi — Holiday"
+Show a trash icon inside the popup for deletion (works on both mobile and desktop)
+Long press on mobile also triggers the same delete confirmation
+On delete: add id to deletedHolidayIds, day returns to normal timetable view
+
+7. Deletion storage:
+
+Store deleted holidays as deletedHolidayIds: string[] using holiday id not date
+This prevents accidental deletion of multiple holidays on the same date
+
+8. Holiday range support in Settings:
+
+Replace single date picker with:
+
+Start date picker
+End date picker (optional — if empty defaults to start date)
+Name field
+Add button
+
+
+Generate every date between start and end as individual holiday entries, all sharing the same name
+Deduplicate against existing holidays
+
+9. Settings holiday list:
+
+Show all active holidays grouped into 3 sections:
+
+National — applies to all states
+State — specific to detected state
+Manual — user added
+
+
+Each holiday has a delete icon
+Deleting adds its id to deletedHolidayIds
+
+Goal: App automatically loads Indian national + state holidays using IP-based location detection. No GPS permission needed. Today and Calendar show holiday names. Deletion uses IDs to avoid conflicts. Delete icon visible on both mobile and desktop. Manual holidays support date ranges. Settings shows holidays grouped by type.

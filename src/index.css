@@ -1,0 +1,203 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 0%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 0 0% 90%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+    --ring: 0 0% 0%;
+
+    --radius: 0rem;
+
+    /* Attendance semantic colors */
+    --attendance-green: 152 60% 42%;
+    --attendance-green-foreground: 0 0% 100%;
+    --attendance-green-muted: 152 40% 92%;
+
+    --attendance-yellow: 40 90% 50%;
+    --attendance-yellow-foreground: 40 90% 12%;
+    --attendance-yellow-muted: 40 60% 92%;
+
+    --attendance-red: 0 72% 51%;
+    --attendance-red-foreground: 0 0% 100%;
+    --attendance-red-muted: 0 50% 94%;
+
+    --attendance-grey: 215 15% 75%;
+    --attendance-grey-foreground: 215 15% 30%;
+    --attendance-grey-muted: 215 10% 94%;
+
+    --attendance-blue: 215 80% 55%;
+    --attendance-blue-foreground: 0 0% 100%;
+    --attendance-blue-muted: 215 60% 93%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 0 0% 0%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 90%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 0%;
+    --sidebar-ring: 0 0% 0%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --sidebar: 0 0% 98%;
+    --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+    --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    --shadow-2xs: 1px 1px 0px 0px #000000;
+    --shadow-xs: 2px 2px 0px 0px #000000;
+    --shadow-sm: 3px 3px 0px 0px #000000;
+    --shadow: 5px 5px 0px 0px #000000;
+    --shadow-md: 8px 8px 0px 0px #000000;
+    --shadow-lg: 12px 12px 0px 0px #000000;
+    --shadow-xl: 16px 16px 0px 0px #000000;
+    --shadow-2xl: 24px 24px 0px 0px #000000;
+    --tracking-normal: 0em;
+    --spacing: 0.25rem;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 100%;
+    --input: 0 0% 100%;
+    --ring: 0 0% 100%;
+
+    --attendance-green: 152 55% 38%;
+    --attendance-green-foreground: 0 0% 100%;
+    --attendance-green-muted: 152 30% 15%;
+
+    --attendance-yellow: 40 80% 45%;
+    --attendance-yellow-foreground: 40 90% 12%;
+    --attendance-yellow-muted: 40 30% 15%;
+
+    --attendance-red: 0 65% 45%;
+    --attendance-red-foreground: 0 0% 100%;
+    --attendance-red-muted: 0 30% 15%;
+
+    --attendance-grey: 215 10% 40%;
+    --attendance-grey-foreground: 215 10% 80%;
+    --attendance-grey-muted: 215 10% 15%;
+
+    --attendance-blue: 215 70% 50%;
+    --attendance-blue-foreground: 0 0% 100%;
+    --attendance-blue-muted: 215 40% 15%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100%;
+    --sidebar-ring: 0 0% 100%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar: 0 0% 5%;
+    --shadow-2xs: 1px 1px 0px 0px #ffffff;
+    --shadow-xs: 2px 2px 0px 0px #ffffff;
+    --shadow-sm: 3px 3px 0px 0px #ffffff;
+    --shadow: 5px 5px 0px 0px #ffffff;
+    --shadow-md: 8px 8px 0px 0px #ffffff;
+    --shadow-lg: 12px 12px 0px 0px #ffffff;
+    --shadow-xl: 16px 16px 0px 0px #ffffff;
+    --shadow-2xl: 24px 24px 0px 0px #ffffff;
+    --radius: 0rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Space Grotesk', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Focus styles for accessibility */
+  button:focus-visible,
+  a:focus-visible,
+  select:focus-visible,
+  input:focus-visible {
+    @apply outline-2 outline-ring outline-offset-2;
+  }
+}
+
+/* Button press effect */
+@layer utilities {
+  .active-press {
+    transition: transform 100ms ease;
+  }
+  .active-press:active {
+    transform: scale(0.97);
+  }
+}
