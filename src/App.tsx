@@ -16,7 +16,8 @@ import SettingsPage from "./pages/Settings";
 import SettingsHolidays from "./pages/settings/SettingsHolidays";
 import SettingsSemester from "./pages/settings/SettingsSemester";
 import SettingsSubjects from "./pages/settings/SettingsSubjects";
-import SettingsTimetable from "./pages/settings/SettingsTimetable"; // ✅ ADD THIS
+import SettingsTimetable from "./pages/settings/SettingsTimetable";
+import SettingsNotifications from "./pages/settings/SettingsNotifications";
 
 import NotFound from "./pages/NotFound";
 import { ChevronLeft } from "lucide-react";
@@ -78,20 +79,12 @@ const App = () => (
                 element={<SettingsSubjects />}
               />
 
-              {/* 🔥 FIXED TIMETABLE */}
-              <Route
-                path="/settings/timetable"
-                element={<SettingsTimetable />}
-              />
+              <Route path="/settings/timetable" element={<SettingsTimetable />} />
+              <Route path="/settings/notifications" element={<SettingsNotifications />} />
 
               <Route
                 path="/settings/holidays"
                 element={<SettingsHolidays />}
-              />
-
-              <Route
-                path="/settings/notifications"
-                element={<SettingsPlaceholder title="Notifications" />}
               />
               <Route
                 path="/settings/data"
@@ -100,10 +93,6 @@ const App = () => (
               <Route
                 path="/settings/appearance"
                 element={<SettingsPlaceholder title="Appearance" />}
-              />
-              <Route
-                path="/settings/danger"
-                element={<SettingsPlaceholder title="Danger Zone" />}
               />
 
               <Route path="*" element={<NotFound />} />
