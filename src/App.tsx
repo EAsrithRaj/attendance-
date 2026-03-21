@@ -18,6 +18,7 @@ import SettingsSemester from "./pages/settings/SettingsSemester";
 import SettingsSubjects from "./pages/settings/SettingsSubjects";
 import SettingsTimetable from "./pages/settings/SettingsTimetable";
 import SettingsNotifications from "./pages/settings/SettingsNotifications";
+import SettingsData from "./pages/settings/SettingsData";
 
 import NotFound from "./pages/NotFound";
 import { ChevronLeft } from "lucide-react";
@@ -86,10 +87,7 @@ const App = () => (
                 path="/settings/holidays"
                 element={<SettingsHolidays />}
               />
-              <Route
-                path="/settings/data"
-                element={<SettingsPlaceholder title="Data" />}
-              />
+              <Route path="/settings/data" element={<SettingsData />} />
               <Route
                 path="/settings/appearance"
                 element={<SettingsPlaceholder title="Appearance" />}
