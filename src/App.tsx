@@ -14,7 +14,8 @@ import CalendarPage from "./pages/Calendar";
 import SettingsPage from "./pages/Settings";
 
 import SettingsHolidays from "./pages/settings/SettingsHolidays";
-import SettingsSemester from "./pages/settings/SettingsSemester"; // ✅ ADDED
+import SettingsSemester from "./pages/settings/SettingsSemester";
+import SettingsSubjects from "./pages/settings/SettingsSubjects";
 
 import NotFound from "./pages/NotFound";
 import { ChevronLeft } from "lucide-react";
@@ -77,10 +78,7 @@ const App = () => (
               {/* ✅ FIXED: Semester now real page */}
               <Route path="/settings/semester" element={<SettingsSemester />} />
 
-              <Route
-                path="/settings/subjects"
-                element={<SettingsPlaceholder title="Subjects" />}
-              />
+              <Route path="/settings/subjects" element={<SettingsSubjects />} />
               <Route
                 path="/settings/timetable"
                 element={<SettingsPlaceholder title="Timetable" />}
