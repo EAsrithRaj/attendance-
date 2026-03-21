@@ -6,13 +6,13 @@ import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { AppProvider } from "@/context/AppContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import PageShell from "@/components/PageShell";
-
+import SettingsAppearance from "./pages/settings/SettingsAppearance";
 import Index from "./pages/Index";
 import TimetablePage from "./pages/Timetable";
 import SubjectsPage from "./pages/Subjects";
 import CalendarPage from "./pages/Calendar";
 import SettingsPage from "./pages/Settings";
-
+import SettingsExams from "./pages/settings/SettingsExams";
 import SettingsHolidays from "./pages/settings/SettingsHolidays";
 import SettingsSemester from "./pages/settings/SettingsSemester";
 import SettingsSubjects from "./pages/settings/SettingsSubjects";
@@ -87,10 +87,14 @@ const App = () => (
                 path="/settings/holidays"
                 element={<SettingsHolidays />}
               />
+              <Route
+                path="/settings/exams"
+                element={<SettingsExams />}
+              />
               <Route path="/settings/data" element={<SettingsData />} />
               <Route
                 path="/settings/appearance"
-                element={<SettingsPlaceholder title="Appearance" />}
+                element={<SettingsAppearance />}
               />
 
               <Route path="*" element={<NotFound />} />

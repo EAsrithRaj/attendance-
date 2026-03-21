@@ -68,6 +68,7 @@ export default function SettingsPage() {
 
 // ── Settings menu items ───────────────────────────────────────────────────────
 
+
 interface MenuItem {
   label: string;
   subtitle?: string;
@@ -99,6 +100,14 @@ function MENU_ITEMS(
       iconBg: "bg-violet-100 dark:bg-violet-900/30",
       iconColor: "text-violet-600 dark:text-violet-400",
       badge: subjectCount,
+    },
+    {
+      label: "Exam Periods",
+      subtitle: "Manage exam schedules",
+      route: "/settings/exams",
+      icon: CalendarDays,
+      iconBg: "bg-blue-100 dark:bg-blue-900/30",
+      iconColor: "text-blue-600 dark:text-blue-400",
     },
     {
       label: "Holidays",
