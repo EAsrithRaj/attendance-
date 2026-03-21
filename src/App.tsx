@@ -16,14 +16,13 @@ import SettingsPage from "./pages/Settings";
 import SettingsHolidays from "./pages/settings/SettingsHolidays";
 import SettingsSemester from "./pages/settings/SettingsSemester";
 import SettingsSubjects from "./pages/settings/SettingsSubjects";
+import SettingsTimetable from "./pages/settings/SettingsTimetable"; // ✅ ADD THIS
 
 import NotFound from "./pages/NotFound";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient();
-
-// ── Placeholder factory ───────────────────────────────────────────────────────
 
 function SettingsPlaceholder({ title }: { title: string }) {
   const navigate = useNavigate();
@@ -55,8 +54,6 @@ function SettingsPlaceholder({ title }: { title: string }) {
   );
 }
 
-// ── App ───────────────────────────────────────────────────────────────────────
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -66,25 +63,27 @@ const App = () => (
         <AppProvider>
           <BrowserRouter>
             <Routes>
-              {/* ── Core pages ── */}
               <Route path="/" element={<Index />} />
               <Route path="/timetable" element={<TimetablePage />} />
               <Route path="/subjects" element={<SubjectsPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
 
-              {/* ── Settings ── */}
               <Route path="/settings" element={<SettingsPage />} />
 
-              {/* ✅ FIXED: Semester now real page */}
               <Route path="/settings/semester" element={<SettingsSemester />} />
 
-              <Route path="/settings/subjects" element={<SettingsSubjects />} />
+              {/* FIXED SUBJECTS */}
               <Route
-                path="/settings/timetable"
-                element={<SettingsPlaceholder title="Timetable" />}
+                path="/settings/subjects"
+                element={<SettingsSubjects />}
               />
 
-              {/* Already real */}
+              {/* 🔥 FIXED TIMETABLE */}
+              <Route
+                path="/settings/timetable"
+                element={<SettingsTimetable />}
+              />
+
               <Route
                 path="/settings/holidays"
                 element={<SettingsHolidays />}
