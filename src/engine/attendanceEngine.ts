@@ -99,3 +99,72 @@ export function getSubjectState(
   if (percentage < minimum + 3) return "YELLOW";
   return "GREEN";
 }
+
+// ── Predictive attendance insight ─────────────────────────────────────────────
+
+export interface AttendanceInsight {
+  percentage: number;
+  required: number;
+  canSkip: number;
+  mustAttend: number;
+  status: "safe" | "warning" | "danger";
+}
+
+/**
+ * Computes a predictive insight for a subject:
+ * - how many classes can still be skipped
+ * - how many must be attended consecutively to recover
+ * - current standing (safe / warning / danger)
+ *
+ * Uses closed-form algebra — no simulation loops.
+ */
+export function computeAttendanceInsight(
+  subject: Subject,
+  records: AttendanceRecord[]
+): AttendanceInsight {
+  const required = subject.minimumRequiredPercentage;
+  const stats = computeAttendanceStats(subject, records);
+
+  const t = stats.totalWeighted;   // total weighted classes (excl. cancelled)
+  const p = stats.attendedWeighted; // attended weighted classes
+  const percentage = stats.percentage; // already computed, reused for status
+
+  // ── Edge case: no classes recorded yet ───────────────────────────────────
+  if (t === 0) {
+    return { percentage: 100, required, canSkip: 0, mustAttend: 0, status: "safe" };
+  }
+
+  // ── Status ────────────────────────────────────────────────────────────────
+  const status: AttendanceInsight["status"] =
+    percentage < require
+      ? "danger"
+      : percentage < required + 5
+      ? "warning"
+      : "safe";
+
+  // ── canSkip ───────────────────────────────────────────────────────────────
+  // Maximum x such that: p / (t + x) >= required / 100
+  // Solved:  x <= (p * 100 / required) - t
+  let canSkip = 0;
+  if (required > 0) {
+    const rawSkip = (p * 100) / required - t;
+    canSkip = Math.max(0, Math.floor(rawSkip));
+  }
+
+  // ── mustAttend ────────────────────────────────────────────────────────────
+  // Minimum x such that: (p + x) / (t + x) >= required / 100
+  // Solved:  x >= (required * t - p * 100) / (100 - required)
+  let mustAttend = 0;
+  if (percentage < required) {
+    const denominator = 100 - required;
+    if (denominator <= 0) {
+      // required === 100%: must attend every remaining class — return a large sentinel
+      mustAttend = Math.max(0, t - p);
+    } else {
+      const rawAttend = (required * t - p * 100) / denominator;
+      mustAttend = Math.max(0, Math.ceil(rawAttend));
+    }
+  }
+
+  return { percentage, required, canSkip, mustAttend, status };
+}

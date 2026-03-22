@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useAppState } from "@/context/AppContext";
-import { computeAttendanceStats, getSubjectState } from "@/engine/attendanceEngine";
+import {
+  computeAttendanceStats,
+  getSubjectState,
+  computeAttendanceInsight,
+} from "@/engine/attendanceEngine";
 import type { AttendanceStatus, DayState, Holiday } from "@/types/attendance";
 import PageShell from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
@@ -251,6 +255,8 @@ export default function HomePage() {
           if (!subject) return null;
           const record = getRecord(slot.subjectId, slot.id);
           const stats = computeAttendanceStats(subject, records);
+          const insight = computeAttendanceInsight(subject, records);
+          console.log(subject.name, insight);
           const state = getSubjectState(stats.percentage, subject.minimumRequiredPercentage);
 
           return (
@@ -355,6 +361,8 @@ export default function HomePage() {
           const subject = subjectMap.get(rec.subjectId);
           if (!subject) return null;
           const stats = computeAttendanceStats(subject, records);
+          const insight = computeAttendanceInsight(subject, records);
+          console.log(subject.name, insight);
           const state = getSubjectState(stats.percentage, subject.minimumRequiredPercentage);
 
           return (
@@ -422,22 +430,6 @@ export default function HomePage() {
                           : "Safe"}
                       </span>
                     </div>
-
-                    <span
-                      className={`text-[11px] font-semibold ${
-                        state === "RED"
-                          ? "text-red-600"
-                          : state === "YELLOW"
-                          ? "text-yellow-600"
-                          : "text-green-600"
-                      }`}
-                    >
-                      {state === "RED"
-                        ? "Must attend"
-                        : state === "YELLOW"
-                        ? "Be careful"
-                        : "Safe"}
-                    </span>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
                     min {subject.minimumRequiredPercentage}%
@@ -446,41 +438,26 @@ export default function HomePage() {
               </div>
 
               {/* Action buttons */}
-              <div className="grid grid-cols-3 gap-2 mt-2">
+              <div className="flex gap-2 mt-2">
+
+                {/* PRIMARY */}
                 <Button
-                  className="flex-1 h-12 active:scale-95 transition-all duration-150"
+                  className="flex-1 h-12 text-base font-semibold active:scale-95 transition-all duration-150"
                   variant={rec.status === "PRESENT" ? "default" : "outline"}
-                  disabled={rec.status === "PRESENT"}
                   onClick={() => mark(rec.subjectId, rec.slotId, rec.weightSnapshot, "PRESENT")}
                 >
-                  Present
+                  {rec.status === "PRESENT" ? "Present ✓" : "Mark Present"}
                 </Button>
 
+                {/* SECONDARY */}
                 <Button
-                  className={`flex-1 h-12 active:scale-95 transition-all duration-150 ${
-                    rec.status === "ABSENT"
-                      ? "border-red-500 text-red-600 bg-red-50"
-                      : ""
-                  }`}
+                  className="h-12 px-3 active:scale-95 transition-all duration-150 border-red-500 text-red-600"
                   variant="outline"
-                  disabled={rec.status === "ABSENT"}
                   onClick={() => mark(rec.subjectId, rec.slotId, rec.weightSnapshot, "ABSENT")}
                 >
-                  Absent
+                  ✕
                 </Button>
 
-                <Button
-                  className={`flex-1 h-12 active:scale-95 transition-all duration-150 ${
-                    rec.status === "CANCELLED"
-                      ? "border-gray-500 text-gray-600 bg-gray-100"
-                      : ""
-                  }`}
-                  variant="outline"
-                  disabled={rec.status === "CANCELLED"}
-                  onClick={() => mark(rec.subjectId, rec.slotId, rec.weightSnapshot, "CANCELLED")}
-                >
-                  Cancel
-                </Button>
               </div>
             </div>
           );
