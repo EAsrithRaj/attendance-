@@ -1,8 +1,15 @@
-import type { AttendanceRecord, AttendanceStats, Subject, TimetableSlot, NotificationLevel, DayState } from "@/types/attendance";
+import type {
+  AttendanceRecord,
+  AttendanceStats,
+  Subject,
+  TimetableSlot,
+  NotificationLevel,
+  DayState,
+} from "@/types/attendance";
 
 export function computeAttendanceStats(
   subject: Subject,
-  records: AttendanceRecord[]
+  records: AttendanceRecord[],
 ): AttendanceStats {
   const subjectRecords = records.filter((r) => r.subjectId === subject.id);
 
@@ -21,13 +28,17 @@ export function computeAttendanceStats(
     }
   }
 
-  const percentage = totalWeighted > 0 ? (attendedWeighted / totalWeighted) * 100 : 100;
+  const percentage =
+    totalWeighted > 0 ? (attendedWeighted / totalWeighted) * 100 : 100;
 
   // Bunk buffer: max classes you can skip and still be at minimum
   const requiredFraction = subject.minimumRequiredPercentage / 100;
   const maxBunkable =
     totalWeighted > 0
-      ? Math.max(0, Math.floor(attendedWeighted / requiredFraction - totalWeighted))
+      ? Math.max(
+          0,
+          Math.floor(attendedWeighted / requiredFraction - totalWeighted),
+        )
       : 0;
 
   // Must-attend-next via forward simulation
@@ -35,7 +46,7 @@ export function computeAttendanceStats(
   const mustAttendNext = computeMustAttendNext(
     totalWeighted,
     attendedWeighted,
-    yellowThreshold
+    yellowThreshold,
   );
 
   return {
@@ -55,7 +66,7 @@ export function computeAttendanceStats(
 function computeMustAttendNext(
   totalWeighted: number,
   attendedWeighted: number,
-  targetPercentage: number
+  targetPercentage: number,
 ): number {
   const target = targetPercentage / 100;
   let t = totalWeighted;
@@ -91,10 +102,7 @@ export function getNotificationLevel(state: DayState): NotificationLevel {
   }
 }
 
-export function getSubjectState(
-  percentage: number,
-  minimum: number
-): DayState {
+export function getSubjectState(percentage: number, minimum: number): DayState {
   if (percentage < minimum) return "RED";
   if (percentage < minimum + 3) return "YELLOW";
   return "GREEN";
@@ -120,27 +128,33 @@ export interface AttendanceInsight {
  */
 export function computeAttendanceInsight(
   subject: Subject,
-  records: AttendanceRecord[]
+  records: AttendanceRecord[],
 ): AttendanceInsight {
   const required = subject.minimumRequiredPercentage;
   const stats = computeAttendanceStats(subject, records);
 
-  const t = stats.totalWeighted;   // total weighted classes (excl. cancelled)
+  const t = stats.totalWeighted; // total weighted classes (excl. cancelled)
   const p = stats.attendedWeighted; // attended weighted classes
   const percentage = stats.percentage; // already computed, reused for status
 
   // ── Edge case: no classes recorded yet ───────────────────────────────────
   if (t === 0) {
-    return { percentage: 100, required, canSkip: 0, mustAttend: 0, status: "safe" };
+    return {
+      percentage: 100,
+      required,
+      canSkip: 0,
+      mustAttend: 0,
+      status: "safe",
+    };
   }
 
   // ── Status ────────────────────────────────────────────────────────────────
   const status: AttendanceInsight["status"] =
-    percentage < require
+    percentage < required
       ? "danger"
       : percentage < required + 5
-      ? "warning"
-      : "safe";
+        ? "warning"
+        : "safe";
 
   // ── canSkip ───────────────────────────────────────────────────────────────
   // Maximum x such that: p / (t + x) >= required / 100
