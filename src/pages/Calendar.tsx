@@ -303,6 +303,7 @@ export default function CalendarPage() {
     examPeriods, semester,
     markAttendance, clearMark, addExtraClass, deleteExtraClass,
     deleteAutoHoliday, setHolidays,
+    setSelectedDate: setGlobalDate,
   } = useAppState();
 
   const [viewDate, setViewDate] = useState(() => new Date());
@@ -563,7 +564,10 @@ export default function CalendarPage() {
                   <button
                     onClick={() => {
                       if (longPressTriggered.current) return;
-                      if (clickable) setSelectedDate(dateStr);
+                      if (clickable) {
+                        setSelectedDate(dateStr);
+                        setGlobalDate(dateStr);
+                      }
                     }}
                     onTouchStart={() => handleTouchStart(dateStr)}
                     onTouchEnd={handleTouchEnd}

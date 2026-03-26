@@ -1,0 +1,137 @@
+Fix a data integrity issue in my React + TypeScript attendance app.
+
+----------------------------------------
+
+PROBLEM:
+
+- Attendance can be marked from TWO places:
+  1. Calendar screen
+  2. Today screen
+
+- These are not synced
+- This allows duplicate or conflicting attendance records
+
+----------------------------------------
+
+GOAL:
+
+1. Introduce a single source of truth for date (selectedDate)
+2. Calendar controls selectedDate
+3. Today screen becomes READ-ONLY
+4. Remove duplicate marking from Today
+
+----------------------------------------
+
+STEP 1 — GLOBAL STATE (AppContext)
+
+Locate AppContext (useAppState).
+
+Add:
+
+const [selectedDate, setSelectedDate] = useState(getTodayStr());
+
+Expose in context:
+
+selectedDate,
+setSelectedDate
+
+----------------------------------------
+
+STEP 2 — CALENDAR SCREEN
+
+Find calendar date click handler.
+
+Modify it so that:
+
+setSelectedDate(clickedDate)
+
+is called when user selects a date.
+
+Do NOT change existing attendance logic here.
+
+----------------------------------------
+
+STEP 3 — TODAY SCREEN
+
+Locate the Today page (component using PageShell title="Today").
+
+Make these changes:
+
+1. REMOVE:
+const today = getTodayStr();
+
+2. ADD:
+const { selectedDate } = useAppState();
+
+3. Replace ALL:
+r.date === today
+
+WITH:
+r.date === selectedDate
+
+----------------------------------------
+
+STEP 4 — REMOVE MUTATIONS FROM TODAY
+
+In Today screen:
+
+Disable or remove ALL attendance actions:
+
+- markAttendance()
+- clearMark()
+- bulkMark()
+- buttons: Present / Absent / Cancel
+
+Implementation:
+
+Option A (preferred):
+Remove onClick handlers
+
+Option B:
+Add disabled={true} to buttons
+
+----------------------------------------
+
+STEP 5 — ENSURE SINGLE WRITE PATH
+
+Attendance must only be updated from Calendar screen.
+
+Verify:
+No markAttendance calls exist in Today component.
+
+----------------------------------------
+
+STEP 6 — OPTIONAL UX
+
+If selectedDate !== today:
+
+Display a small label:
+
+"Viewing: {selectedDate}"
+
+----------------------------------------
+
+CONSTRAINTS:
+
+- Do NOT rewrite entire app
+- Do NOT change data structures
+- Do NOT modify attendanceEngine
+- Keep UI layout intact
+- Minimal changes only
+
+----------------------------------------
+
+EXPECTED RESULT:
+
+- Calendar controls date
+- Today reflects selected date
+- No duplicate marking possible
+- Data remains consistent
+
+----------------------------------------
+
+OUTPUT FORMAT:
+
+- List files modified
+- Show only changed code blocks (diff-style)
+- Keep response concise

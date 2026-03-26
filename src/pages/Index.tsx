@@ -16,10 +16,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Check, X, Ban, Eraser, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import OverallAttendance from "@/components/OverallAttendance";
 import AddExtraClassModal from "@/components/AddExtraClassModal";
-import { toast } from "sonner";
 
 function getTodayStr(): string {
   return new Date().toISOString().split("T")[0];
@@ -81,24 +80,22 @@ export default function HomePage() {
     allHolidays,
     holidays,
     examPeriods,
-    markAttendance,
-    clearMark,
     addExtraClass,
     deleteExtraClass,
     deleteAutoHoliday,
     setHolidays,
     loadTestData,
+    selectedDate,
   } = useAppState();
 
-  const today = getTodayStr();
-  const dow = getDayOfWeek(today);
+  const dow = getDayOfWeek(selectedDate);
   const [extraModalOpen, setExtraModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Holiday | null>(null);
 
-  const todayHoliday = allHolidays.find((h) => h.date === today) ?? null;
+  const todayHoliday = allHolidays.find((h) => h.date === selectedDate) ?? null;
   const isHoliday = todayHoliday !== null;
   const isExam = examPeriods.some(
-    (ep) => today >= ep.startDate && today <= ep.endDate,
+    (ep) => selectedDate >= ep.startDate && selectedDate <= ep.endDate,
   );
 
   const todaySlots = timetable
@@ -111,40 +108,14 @@ export default function HomePage() {
   console.log("records:", records.length);
   console.log("todaySlots:", todaySlots.length);
 
-  const extraRecords = records.filter((r) => r.date === today && r.isExtra);
+  const extraRecords = records.filter((r) => r.date === selectedDate && r.isExtra);
   const subjectMap = new Map(subjects.map((s) => [s.id, s]));
 
   const getRecord = (subjectId: string, slotId: string) =>
     records.find(
       (r) =>
-        r.subjectId === subjectId && r.date === today && r.slotId === slotId,
+        r.subjectId === subjectId && r.date === selectedDate && r.slotId === slotId,
     );
-
-  // Wrap markAttendance with toast feedback
-  const mark = (
-    subjectId: string,
-    slotId: string,
-    weight: number,
-    status: AttendanceStatus,
-  ) => {
-    markAttendance(subjectId, today, slotId, weight, status);
-
-    if (status === "PRESENT") toast.success("Marked Present");
-    else if (status === "ABSENT") toast.success("Marked Absent");
-    else if (status === "CANCELLED") toast.success("Marked Cancelled");
-  };
-
-  const bulkMark = (status: AttendanceStatus) => {
-    todaySlots.forEach((slot) => {
-      markAttendance(slot.subjectId, today, slot.id, slot.weight, status);
-    });
-  };
-
-  const bulkClear = () => {
-    todaySlots.forEach((slot) => {
-      clearMark(slot.subjectId, today, slot.id);
-    });
-  };
 
   const confirmDeleteHoliday = () => {
     if (!deleteTarget) return;
@@ -216,31 +187,7 @@ export default function HomePage() {
   }
 
   return (
-    <PageShell
-      title="Today"
-      actions={
-        todaySlots.length > 0 && !isHoliday && !isExam ? (
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => bulkMark("PRESENT")}
-              title="All Present"
-            >
-              <Check className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={bulkClear}
-              title="Clear All"
-            >
-              <Eraser className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : undefined
-      }
-    >
+    <PageShell title="Today">
       <div className="rounded-2xl border border-border p-4 mb-4 flex items-center justify-between">
         {/* LEFT: existing OverallAttendance */}
         <div>
@@ -269,7 +216,12 @@ export default function HomePage() {
       </div>
 
       <p className="mb-4 mt-3 text-xs text-muted-foreground font-mono tracking-wide">
-        {today}
+        {selectedDate}
+        {selectedDate !== getTodayStr() && (
+          <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+            Viewing past date
+          </span>
+        )}
       </p>
 
       {/* ── Holiday banner ─────────────────────────────────── */}
@@ -345,7 +297,7 @@ export default function HomePage() {
                     </p>
                   </div>
 
-                  {/* Top-right: status badge + percentage + erase */}
+                  {/* Top-right: status badge + percentage */}
                   <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
                     <div className="flex items-center gap-2">
                       {/* Status badge */}
@@ -362,18 +314,6 @@ export default function HomePage() {
                           {record.status}
                         </span>
                       )}
-                      {/* Erase — only when marked */}
-                      {record && (
-                        <button
-                          onClick={() =>
-                            clearMark(slot.subjectId, today, slot.id)
-                          }
-                          className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
-                          title="Clear mark"
-                        >
-                          <Eraser className="h-3.5 w-3.5" />
-                        </button>
-                      )}
                     </div>
                     <span
                       className={`text-2xl font-bold font-mono leading-none ${stateColorMap[state]}`}
@@ -386,51 +326,6 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Action buttons — grid 3 cols, instant one-tap */}
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  <Button
-                    className="flex-1 h-12 active:scale-95 transition-all duration-150"
-                    variant={
-                      record?.status === "PRESENT" ? "default" : "outline"
-                    }
-                    disabled={record?.status === "PRESENT"}
-                    onClick={() =>
-                      mark(slot.subjectId, slot.id, slot.weight, "PRESENT")
-                    }
-                  >
-                    Present
-                  </Button>
-
-                  <Button
-                    className={`flex-1 h-12 active:scale-95 transition-all duration-150 ${
-                      record?.status === "ABSENT"
-                        ? "border-red-500 text-red-600 bg-red-50"
-                        : ""
-                    }`}
-                    variant="outline"
-                    disabled={record?.status === "ABSENT"}
-                    onClick={() =>
-                      mark(slot.subjectId, slot.id, slot.weight, "ABSENT")
-                    }
-                  >
-                    Absent
-                  </Button>
-
-                  <Button
-                    className={`flex-1 h-12 active:scale-95 transition-all duration-150 ${
-                      record?.status === "CANCELLED"
-                        ? "border-gray-500 text-gray-600 bg-gray-100"
-                        : ""
-                    }`}
-                    variant="outline"
-                    disabled={record?.status === "CANCELLED"}
-                    onClick={() =>
-                      mark(slot.subjectId, slot.id, slot.weight, "CANCELLED")
-                    }
-                  >
-                    Cancel
-                  </Button>
-                </div>
               </div>
             );
           })}
@@ -488,7 +383,7 @@ export default function HomePage() {
                         </span>
                       )}
                       <button
-                        onClick={() => deleteExtraClass(rec.slotId, today)}
+                        onClick={() => deleteExtraClass(rec.slotId, selectedDate)}
                         className="p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors duration-150"
                         title="Delete extra class"
                       >
@@ -526,40 +421,6 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Action buttons */}
-                <div className="flex gap-2 mt-2">
-                  {/* PRIMARY */}
-                  <Button
-                    className="flex-1 h-12 text-base font-semibold active:scale-95 transition-all duration-150"
-                    variant={rec.status === "PRESENT" ? "default" : "outline"}
-                    onClick={() =>
-                      mark(
-                        rec.subjectId,
-                        rec.slotId,
-                        rec.weightSnapshot,
-                        "PRESENT",
-                      )
-                    }
-                  >
-                    {rec.status === "PRESENT" ? "Present ✓" : "Mark Present"}
-                  </Button>
-
-                  {/* SECONDARY */}
-                  <Button
-                    className="h-12 px-3 active:scale-95 transition-all duration-150 border-red-500 text-red-600"
-                    variant="outline"
-                    onClick={() =>
-                      mark(
-                        rec.subjectId,
-                        rec.slotId,
-                        rec.weightSnapshot,
-                        "ABSENT",
-                      )
-                    }
-                  >
-                    ✕
-                  </Button>
-                </div>
               </div>
             );
           })}
@@ -580,9 +441,9 @@ export default function HomePage() {
         open={extraModalOpen}
         onClose={() => setExtraModalOpen(false)}
         subjects={subjects}
-        date={today}
+        date={selectedDate}
         records={records}
-        onAdd={(subjectId, weight) => addExtraClass(subjectId, today, weight)}
+        onAdd={(subjectId, weight) => addExtraClass(subjectId, selectedDate, weight)}
       />
 
       {/* ── Holiday delete confirmation ─────────────────────── */}

@@ -20,6 +20,10 @@ import { INDIAN_HOLIDAYS } from "@/data/holidays";
 import { detectUserState, getCachedUserState } from "@/lib/holidayDetection";
 import { TEST_SUBJECTS, TEST_TIMETABLE, TEST_RECORDS, TEST_HOLIDAYS, TEST_EXAM_PERIODS, TEST_SEMESTER, runTestVerification } from "@/lib/testData";
 
+function getTodayStr(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
 // ── localStorage keys ──────────────────────────────────────────────────────────
 const DELETED_IDS_KEY = "deletedHolidayIds";
 
@@ -103,6 +107,9 @@ interface AppState {
   loadTestData: () => void;
   /** No-op kept for API compatibility while Settings UI is still being updated */
   refreshApiHolidays: () => Promise<void>;
+  /** Currently viewed date, controlled by Calendar; Today reads this */
+  selectedDate: string;
+  setSelectedDate: (d: string) => void;
 }
 
 const defaultSemester: SemesterConfig = { startDate: "2026-01-05", endDate: "2026-05-01" };
@@ -133,6 +140,8 @@ const fallback: AppState = {
   resetAll: () => {},
   loadTestData: () => {},
   refreshApiHolidays: async () => {},
+  selectedDate: getTodayStr(),
+  setSelectedDate: () => {},
 };
 
 const AppContext = createContext<AppState>(fallback);
@@ -148,6 +157,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [holidays, _setHolidays] = useState<Holiday[]>(loadHolidays);
   const [examPeriods, _setExamPeriods] = useState<ExamPeriod[]>(loadExamPeriods);
   const [semester, _setSemester] = useState<SemesterConfig>(loadSemesterConfig);
+  const [selectedDate, setSelectedDate] = useState(getTodayStr());
 
   // ── IP-based state detection ────────────────────────────────────────────────
   // Initialise from cache immediately (sync) so first render has the value.
@@ -279,6 +289,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       markAttendance, clearMark, addExtraClass, deleteExtraClass,
       deleteAutoHoliday, restoreAutoHoliday,
       resetAll, loadTestData, refreshApiHolidays,
+      selectedDate, setSelectedDate,
     }}>
       {children}
     </AppContext.Provider>
