@@ -45,7 +45,6 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Check,
   X,
   Ban,
@@ -310,7 +309,6 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filterSubjectId, setFilterSubjectId] = useState("all");
   const [extraModalOpen, setExtraModalOpen] = useState(false);
-  const [bulkOpen, setBulkOpen] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<Holiday | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -392,8 +390,8 @@ export default function CalendarPage() {
     return d === 0 ? 6 : d - 1;
   })();
 
-  const prev = () => { setViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)); setSelectedDate(null); setBulkOpen(false); };
-  const next = () => { setViewDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)); setSelectedDate(null); setBulkOpen(false); };
+  const prev = () => { setViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)); setSelectedDate(null); };
+  const next = () => { setViewDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)); setSelectedDate(null); };
 
   const monthName = viewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
