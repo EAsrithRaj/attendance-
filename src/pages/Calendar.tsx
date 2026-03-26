@@ -309,8 +309,10 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filterSubjectId, setFilterSubjectId] = useState("all");
   const [extraModalOpen, setExtraModalOpen] = useState(false);
-
   const [deleteTarget, setDeleteTarget] = useState<Holiday | null>(null);
+
+  // No bulkOpen state — bulk actions are always visible when selectedSlots.length > 1
+
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggered = useRef(false);
 
@@ -661,11 +663,52 @@ export default function CalendarPage() {
       </div>
 
       {/* ── Past day edit modal ──────────────────────────────── */}
-      <Dialog open={selectedDate !== null && selectedIsPast} onOpenChange={(o) => { if (!o) { setSelectedDate(null); setBulkOpen(false); } }}>
+      <Dialog
+        open={selectedDate !== null && selectedIsPast}
+        onOpenChange={(o) => { if (!o) setSelectedDate(null); }}
+      >
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto pb-20">
           <DialogHeader>
             <DialogTitle className="font-mono text-base">{selectedDate}</DialogTitle>
           </DialogHeader>
+
+          {/* ── Bulk actions — compact 2x2 grid, directly below header ── */}
+          {selectedSlots.length > 1 && (
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <Button
+                size="sm"
+                variant="default"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => bulkMark("PRESENT")}
+              >
+                <Check className="h-3.5 w-3.5" />All Present
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => bulkMark("ABSENT")}
+              >
+                <X className="h-3.5 w-3.5" />All Absent
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => bulkMark("CANCELLED")}
+              >
+                <Ban className="h-3.5 w-3.5" />All Cancelled
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs gap-1.5 text-muted-foreground"
+                onClick={bulkClear}
+              >
+                <Eraser className="h-3.5 w-3.5" />Clear all
+              </Button>
+            </div>
+          )}
 
           {/* Holiday banner */}
           {selectedHoliday && (
@@ -692,14 +735,13 @@ export default function CalendarPage() {
             return hasContent ? (
               <div className="space-y-3">
 
-                {/* ── Slot cards (primary focus) ── */}
+                {/* ── Slot cards ── */}
                 {selectedSlots.map((slot) => {
                   const sub = subjectMap.get(slot.subjectId);
                   if (!sub) return null;
                   const rec = records.find((r) => r.subjectId === slot.subjectId && r.date === selectedDate && r.slotId === slot.id);
                   return (
                     <div key={slot.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
-                      {/* Top: subject + erase */}
                       <div className="flex items-start justify-between">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -718,7 +760,6 @@ export default function CalendarPage() {
                               </span>
                             )}
                           </div>
-                          {/* Middle: time */}
                           <p className="text-xs text-muted-foreground font-mono mt-1">{slot.startTime}–{slot.endTime}</p>
                         </div>
                         {rec && (
@@ -731,7 +772,6 @@ export default function CalendarPage() {
                           </button>
                         )}
                       </div>
-                      {/* Bottom: action buttons */}
                       <div className="grid grid-cols-3 gap-2">
                         <Button
                           size="sm"
@@ -768,7 +808,6 @@ export default function CalendarPage() {
                   if (!sub) return null;
                   return (
                     <div key={rec.slotId} className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
-                      {/* Top: subject + delete */}
                       <div className="flex items-start justify-between">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -797,7 +836,6 @@ export default function CalendarPage() {
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
-                      {/* Bottom: action buttons */}
                       <div className="grid grid-cols-3 gap-2">
                         <Button
                           size="sm"
@@ -827,36 +865,6 @@ export default function CalendarPage() {
                     </div>
                   );
                 })}
-
-                {/* ── Bulk actions (collapsed) ── */}
-                {selectedSlots.length > 1 && (
-                  <div className="rounded-2xl border border-border overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setBulkOpen((v) => !v)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted/40 transition-colors duration-150"
-                    >
-                      <span>Bulk actions</span>
-                      <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${bulkOpen ? "rotate-180" : ""}`} />
-                    </button>
-                    {bulkOpen && (
-                      <div className="grid grid-cols-2 gap-2 px-4 pb-4 pt-1 border-t border-border/60">
-                        <Button size="sm" variant="default" onClick={() => bulkMark("PRESENT")} className="gap-1.5">
-                          <Check className="h-3.5 w-3.5" />All Present
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => bulkMark("ABSENT")} className="gap-1.5">
-                          <X className="h-3.5 w-3.5" />All Absent
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => bulkMark("CANCELLED")} className="gap-1.5">
-                          <Ban className="h-3.5 w-3.5" />All Cancelled
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={bulkClear} className="gap-1.5 text-muted-foreground">
-                          <Eraser className="h-3.5 w-3.5" />Clear all
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* ── Add extra class ── */}
                 <button
@@ -903,7 +911,6 @@ export default function CalendarPage() {
           </SheetHeader>
 
           <div className="space-y-3 mt-4">
-            {/* Holiday banner inside sheet */}
             {selectedHoliday && (
               <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 border border-amber-200 dark:border-amber-800 px-4 py-3">
                 <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">
