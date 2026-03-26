@@ -124,7 +124,7 @@ export function predictDay(
     // Simulate skipping this class
     const tempTotal = t.total + slot.weight;
     const tempAttended = t.attended; // unchanged
-    const tempPercentage = tempTotal > 0 ? (tempAttended / tempTotal) * 100 : 100;
+    const tempPercentage = tempTotal === 0 ? 0 : (tempAttended / tempTotal) * 100;
 
     let skipState: DayState = "GREEN";
     if (tempPercentage < subject.minimumRequiredPercentage) {
@@ -311,14 +311,9 @@ export function predictRange(
 
         let skipState: DayState = "GREEN";
 
-        if (totalWeighted === 0) {
-          skipState = "GREEN";
-        } else {
-          let tempTotal = totalWeighted;
+        {
+          let tempTotal = totalWeighted + Math.max(0, slot.weight);
           let tempAttended = attendedWeighted;
-
-          tempTotal += Math.max(0, slot.weight);
-
           const percentage = tempTotal === 0 ? 0 : (tempAttended / tempTotal) * 100;
 
           if (percentage < subject.minimumRequiredPercentage) {
