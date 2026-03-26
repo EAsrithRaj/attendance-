@@ -34,7 +34,7 @@ export function computeAttendanceStats(
   // Bunk buffer: max classes you can skip and still be at minimum
   const requiredFraction = subject.minimumRequiredPercentage / 100;
   const maxBunkable =
-    totalWeighted > 0
+    totalWeighted > 0 && requiredFraction > 0
       ? Math.max(
           0,
           Math.floor(attendedWeighted / requiredFraction - totalWeighted),
@@ -152,7 +152,7 @@ export function computeAttendanceInsight(
   const status: AttendanceInsight["status"] =
     percentage < required
       ? "danger"
-      : percentage < required + 5
+      : percentage < required + 3
         ? "warning"
         : "safe";
 

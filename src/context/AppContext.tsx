@@ -21,7 +21,8 @@ import { detectUserState, getCachedUserState } from "@/lib/holidayDetection";
 import { TEST_SUBJECTS, TEST_TIMETABLE, TEST_RECORDS, TEST_HOLIDAYS, TEST_EXAM_PERIODS, TEST_SEMESTER, runTestVerification } from "@/lib/testData";
 
 function getTodayStr(): string {
-  return new Date().toISOString().split("T")[0];
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
 }
 
 // ── localStorage keys ──────────────────────────────────────────────────────────
