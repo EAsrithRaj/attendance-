@@ -84,7 +84,6 @@ export default function HomePage() {
     markAttendance,
     clearMark,
     addExtraClass,
-    deleteExtraClass,
     deleteAutoHoliday,
     setHolidays,
     loadTestData,
@@ -102,8 +101,12 @@ export default function HomePage() {
   );
 
   const todaySlots = timetable
-    .filter(() => true) // DEBUG: bypass day filter (today is Sunday, slots would be empty)
+    .filter((slot) => slot.dayOfWeek === dow)
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+  const uniqueSlots = todaySlots.filter(
+    (slot, index, self) => index === self.findIndex((s) => s.id === slot.id),
+  );
 
   console.log("DEBUG START");
   console.log("subjects:", subjects.length);
@@ -111,7 +114,6 @@ export default function HomePage() {
   console.log("records:", records.length);
   console.log("todaySlots:", todaySlots.length);
 
-  const extraRecords = records.filter((r) => r.date === selectedDate && r.isExtra);
   const subjectMap = new Map(subjects.map((s) => [s.id, s]));
 
   const getRecord = (subjectId: string, slotId: string) =>
@@ -212,7 +214,7 @@ export default function HomePage() {
     <PageShell
       title="Today"
       actions={
-        todaySlots.length > 0 && !isHoliday && !isExam ? (
+        uniqueSlots.length > 0 && !isHoliday && !isExam ? (
           <div className="flex gap-1">
             <Button size="sm" variant="outline" onClick={() => bulkMark("PRESENT")} title="All Present">
               <Check className="h-4 w-4" />
@@ -286,8 +288,7 @@ export default function HomePage() {
 
       {!isHoliday &&
         !isExam &&
-        todaySlots.length === 0 &&
-        extraRecords.length === 0 && (
+        uniqueSlots.length === 0 && (
           <div className="rounded-2xl bg-muted px-4 py-6 text-center text-muted-foreground animate-fade-in">
             <p className="text-2xl mb-2">😴</p>
             <p className="text-sm font-medium">No classes today</p>
@@ -298,9 +299,9 @@ export default function HomePage() {
       <div
         className={`flex flex-col gap-4 animate-fade-in transition-opacity ${isHoliday ? "opacity-40 pointer-events-none select-none" : ""}`}
       >
-        {/* Regular timetable slots */}
+        {/* Timetable slots */}
         {!isExam &&
-          todaySlots.map((slot) => {
+          uniqueSlots.map((slot) => {
             const subject = subjectMap.get(slot.subjectId);
             if (!subject) return null;
             const record = getRecord(slot.subjectId, slot.id);
@@ -397,118 +398,6 @@ export default function HomePage() {
                     onClick={() => mark(slot.subjectId, slot.id, slot.weight, "CANCELLED")}
                   >
                     Cancel
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-
-        {/* Extra class cards */}
-        {!isExam &&
-          extraRecords.map((rec) => {
-            const subject = subjectMap.get(rec.subjectId);
-            if (!subject) return null;
-            const stats = computeAttendanceStats(subject, records);
-            const insight = computeAttendanceInsight(subject, records);
-            console.log(subject.name, insight);
-            const state = getSubjectState(
-              stats.percentage,
-              subject.minimumRequiredPercentage,
-            );
-
-            return (
-              <div
-                key={rec.slotId}
-                className={`rounded-2xl border-l-4 border border-border bg-card p-4 shadow-md hover:shadow-lg transition-all duration-200 ${stateBorderMap[state]}`}
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-lg text-card-foreground leading-tight">
-                        {subject.name}
-                      </h3>
-                      <Badge variant="secondary" className="text-[10px]">
-                        Extra
-                      </Badge>
-                      {rec.weightSnapshot === 3 && (
-                        <Badge variant="secondary" className="text-[10px]">
-                          LAB
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Top-right: status badge + % + delete */}
-                  <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
-                    <div className="flex items-center gap-2">
-                      {rec.status && (
-                        <span
-                          className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                            rec.status === "PRESENT"
-                              ? "bg-green-100 text-green-700"
-                              : rec.status === "ABSENT"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-gray-200 text-gray-700"
-                          }`}
-                        >
-                          {rec.status}
-                        </span>
-                      )}
-                      <button
-                        onClick={() => deleteExtraClass(rec.slotId, selectedDate)}
-                        className="p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors duration-150"
-                        title="Delete extra class"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    <div className="flex flex-col items-end leading-tight">
-                      <div className="flex flex-col items-end leading-tight">
-                        <span
-                          className={`text-2xl font-bold font-mono ${stateColorMap[state]}`}
-                        >
-                          {stats.percentage.toFixed(1)}%
-                        </span>
-
-                        <span
-                          className={`text-[11px] font-semibold ${
-                            state === "RED"
-                              ? "text-red-600"
-                              : state === "YELLOW"
-                                ? "text-yellow-600"
-                                : "text-green-600"
-                          }`}
-                        >
-                          {state === "RED"
-                            ? "Must attend"
-                            : state === "YELLOW"
-                              ? "Be careful"
-                              : "Safe"}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      min {subject.minimumRequiredPercentage}%
-                    </p>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    className="flex-1 h-12 text-base font-semibold active:scale-95 transition-all duration-150"
-                    variant={rec.status === "PRESENT" ? "default" : "outline"}
-                    onClick={() => mark(rec.subjectId, rec.slotId, rec.weightSnapshot, "PRESENT")}
-                  >
-                    {rec.status === "PRESENT" ? "Present ✓" : "Mark Present"}
-                  </Button>
-                  <Button
-                    className="h-12 px-3 active:scale-95 transition-all duration-150 border-red-500 text-red-600"
-                    variant="outline"
-                    onClick={() => mark(rec.subjectId, rec.slotId, rec.weightSnapshot, "ABSENT")}
-                  >
-                    ✕
                   </Button>
                 </div>
               </div>
