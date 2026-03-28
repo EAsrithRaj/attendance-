@@ -1,14 +1,24 @@
 import { useMemo } from "react";
 import { useAppState } from "@/context/AppContext";
-import { getSubjectState } from "@/engine/attendanceEngine";
-import type { DayState } from "@/types/attendance";
 
-const stateColor: Record<DayState, string> = {
-  GREEN: "text-attendance-green",
-  YELLOW: "text-attendance-yellow",
-  RED: "text-attendance-red",
-  GREY: "text-muted-foreground",
-  BLUE: "text-attendance-blue",
+type GlobalBand = "goal" | "surviving" | "risk";
+
+const bandText: Record<GlobalBand, string> = {
+  goal: "Global Goal Met",
+  surviving: "Surviving, but below target",
+  risk: "Overall At Risk",
+};
+
+const bandPctColor: Record<GlobalBand, string> = {
+  goal: "text-attendance-green",
+  surviving: "text-attendance-yellow",
+  risk: "text-attendance-red",
+};
+
+const bandStatusColor: Record<GlobalBand, string> = {
+  goal: "text-green-600 dark:text-green-400",
+  surviving: "text-yellow-600 dark:text-yellow-500",
+  risk: "text-red-600 dark:text-red-400",
 };
 
 export default function OverallAttendance() {
@@ -20,9 +30,8 @@ export default function OverallAttendance() {
     let totalWeighted = 0;
     let attendedWeighted = 0;
 
-    // Filter records within semester range
     const semRecords = records.filter(
-      (r) => r.date >= semester.startDate && r.date <= semester.endDate
+      (r) => r.date >= semester.startDate && r.date <= semester.endDate,
     );
 
     for (const rec of semRecords) {
@@ -33,15 +42,41 @@ export default function OverallAttendance() {
       }
     }
 
-    const percentage = totalWeighted > 0
-      ? Math.min(100, Math.max(0, (attendedWeighted / totalWeighted) * 100))
-      : 0;
+    const globalPercentage =
+      totalWeighted > 0
+        ? Math.min(100, Math.max(0, (attendedWeighted / totalWeighted) * 100))
+        : 0;
 
-    // Use the lowest subject minimum as the global minimum
-    const globalMin = Math.min(...subjects.map((s) => s.minimumRequiredPercentage));
-    const state = totalWeighted > 0 ? getSubjectState(percentage, globalMin) : "GREY";
+    const globalMinimum =
+      subjects.reduce((acc, s) => acc + s.minimumRequiredPercentage, 0) /
+      subjects.length;
 
-    return { totalWeighted, attendedWeighted, percentage, state, hasData: totalWeighted > 0 };
+    const globalTarget =
+      subjects.reduce(
+        (acc, s) => acc + (s.targetPercentage ?? s.minimumRequiredPercentage),
+        0,
+      ) / subjects.length;
+
+    let band: GlobalBand;
+    if (globalPercentage >= globalTarget) {
+      band = "goal";
+    } else if (globalPercentage >= globalMinimum) {
+      band = "surviving";
+    } else {
+      band = "risk";
+    }
+
+    const hasData = totalWeighted > 0;
+
+    return {
+      totalWeighted,
+      attendedWeighted,
+      percentage: globalPercentage,
+      globalMinimum,
+      globalTarget,
+      band,
+      hasData,
+    };
   }, [subjects, records, semester]);
 
   if (!stats || subjects.length === 0) return null;
@@ -53,16 +88,28 @@ export default function OverallAttendance() {
       </p>
       {stats.hasData ? (
         <>
-          <p className={`text-3xl font-bold font-mono ${stateColor[stats.state]}`}>
+          <p
+            className={`text-3xl font-bold font-mono ${bandPctColor[stats.band]}`}
+          >
             {stats.percentage.toFixed(1)}%
           </p>
           <p className="text-sm text-muted-foreground font-mono">
-            {stats.attendedWeighted} / {stats.totalWeighted}
+            {stats.attendedWeighted} / {stats.totalWeighted} classes attended
           </p>
         </>
       ) : (
-        <p className="text-3xl font-bold font-mono text-muted-foreground">—</p>
+        <>
+          <p className="text-3xl font-bold font-mono text-muted-foreground">—</p>
+          <p className="text-sm text-muted-foreground font-mono">
+            0 / 0 classes attended
+          </p>
+        </>
       )}
+      <p
+        className={`text-xs font-semibold mt-2 leading-snug ${bandStatusColor[stats.band]}`}
+      >
+        {bandText[stats.band]}
+      </p>
     </div>
   );
 }

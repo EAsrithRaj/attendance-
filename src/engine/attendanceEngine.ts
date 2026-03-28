@@ -119,10 +119,26 @@ export interface AttendanceInsight {
 }
 
 /**
- * Computes a predictive insight for a subject:
- * - how many classes can still be skipped
- * - how many must be attended consecutively to recover
- * - current standing (safe / warning / danger)
+ * Minimum weighted classes (weight 1 each) needed so that
+ * (p + x) / (t + x) >= threshold/100.
+ */
+function mustAttendToReachThreshold(
+  t: number,
+  p: number,
+  thresholdPercent: number,
+): number {
+  const denominator = 100 - thresholdPercent;
+  if (denominator <= 0) {
+    return Math.max(0, t - p);
+  }
+  return Math.max(0, Math.ceil((thresholdPercent * t - p * 100) / denominator));
+}
+
+/**
+ * Computes a predictive insight for a subject (target goal vs survival minimum):
+ * - safe: at or above target — skips until falling below target
+ * - warning: at or above minimum but below target — survival skips + classes to reach goal
+ * - danger: below minimum — classes needed to reach minimum
  *
  * Uses closed-form algebra — no simulation loops.
  */
@@ -130,14 +146,14 @@ export function computeAttendanceInsight(
   subject: Subject,
   records: AttendanceRecord[],
 ): AttendanceInsight {
-  const required = subject.minimumRequiredPercentage;
+  const minimum = subject.minimumRequiredPercentage;
+  const required = minimum;
   const stats = computeAttendanceStats(subject, records);
 
-  const t = stats.totalWeighted; // total weighted classes (excl. cancelled)
-  const p = stats.attendedWeighted; // attended weighted classes
-  const percentage = stats.percentage; // already computed, reused for status
+  const t = stats.totalWeighted;
+  const p = stats.attendedWeighted;
+  const percentage = stats.percentage;
 
-  // ── Edge case: no classes recorded yet ───────────────────────────────────
   if (t === 0) {
     return {
       percentage: 100,
@@ -148,36 +164,34 @@ export function computeAttendanceInsight(
     };
   }
 
-  // ── Status ────────────────────────────────────────────────────────────────
-  const status: AttendanceInsight["status"] =
-    percentage < required
-      ? "danger"
-      : percentage < required + 3
-        ? "warning"
-        : "safe";
+  const rawTarget = subject.targetPercentage ?? minimum;
+  const target = Math.max(rawTarget, minimum);
 
-  // ── canSkip ───────────────────────────────────────────────────────────────
-  // Maximum x such that: p / (t + x) >= required / 100
-  // Solved:  x <= (p * 100 / required) - t
-  let canSkip = 0;
-  if (required > 0) {
-    const rawSkip = (p * 100) / required - t;
-    canSkip = Math.max(0, Math.floor(rawSkip));
+  let status: AttendanceInsight["status"];
+  if (percentage < minimum) {
+    status = "danger";
+  } else if (percentage < target) {
+    status = "warning";
+  } else {
+    status = "safe";
   }
 
-  // ── mustAttend ────────────────────────────────────────────────────────────
-  // Minimum x such that: (p + x) / (t + x) >= required / 100
-  // Solved:  x >= (required * t - p * 100) / (100 - required)
+  let canSkip = 0;
   let mustAttend = 0;
-  if (percentage < required) {
-    const denominator = 100 - required;
-    if (denominator <= 0) {
-      // required === 100%: must attend every remaining class — return a large sentinel
-      mustAttend = Math.max(0, t - p);
-    } else {
-      const rawAttend = (required * t - p * 100) / denominator;
-      mustAttend = Math.max(0, Math.ceil(rawAttend));
+
+  if (status === "safe") {
+    if (target > 0) {
+      canSkip = Math.max(0, Math.floor((p * 100) / target - t));
     }
+    mustAttend = 0;
+  } else if (status === "warning") {
+    if (minimum > 0) {
+      canSkip = Math.max(0, Math.floor((p * 100) / minimum - t));
+    }
+    mustAttend = mustAttendToReachThreshold(t, p, target);
+  } else {
+    canSkip = 0;
+    mustAttend = mustAttendToReachThreshold(t, p, minimum);
   }
 
   return { percentage, required, canSkip, mustAttend, status };

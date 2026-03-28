@@ -2,6 +2,8 @@ export interface Subject {
   id: string;
   name: string;
   minimumRequiredPercentage: number;
+  /** Optional goal; if omitted, engine uses `minimumRequiredPercentage`. */
+  targetPercentage?: number;
 }
 
 export interface TimetableSlot {

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useAppState } from "@/context/AppContext";
 import {
   computeAttendanceStats,
-  getSubjectState,
   computeAttendanceInsight,
 } from "@/engine/attendanceEngine";
 import type { AttendanceStatus, DayState, Holiday } from "@/types/attendance";
@@ -54,6 +53,35 @@ const stateBorderMap: Record<DayState, string> = {
   GREY: "border-l-border",
   BLUE: "border-l-attendance-blue",
 };
+
+/** Maps engine insight status to card chrome (safe / warning / danger). */
+function insightStatusToDayState(
+  status: "safe" | "warning" | "danger",
+): DayState {
+  switch (status) {
+    case "safe":
+      return "GREEN";
+    case "warning":
+      return "YELLOW";
+    case "danger":
+      return "RED";
+  }
+}
+
+function compactInsightText(
+  status: "safe" | "warning" | "danger",
+  canSkip: number,
+  mustAttend: number,
+): string {
+  switch (status) {
+    case "safe":
+      return `Goal met! Can skip ${canSkip}`;
+    case "warning":
+      return `Below goal. Can skip ${canSkip} to survive. Attend ${mustAttend} to reach goal.`;
+    case "danger":
+      return `Failing. Attend next ${mustAttend} to survive.`;
+  }
+}
 
 const statusBadge: Record<AttendanceStatus, string> = {
   PRESENT:   "bg-green-100  text-green-700  dark:bg-green-900/40  dark:text-green-400",
@@ -292,10 +320,7 @@ export default function HomePage() {
             const record = getRecord(slot.subjectId, slot.id);
             const stats = computeAttendanceStats(subject, records);
             const insight = computeAttendanceInsight(subject, records);
-            const state = getSubjectState(
-              stats.percentage,
-              subject.minimumRequiredPercentage
-            );
+            const state = insightStatusToDayState(insight.status);
 
             return (
               <div
@@ -347,11 +372,11 @@ export default function HomePage() {
                       </span>
                       {/* 🔥 NEW INSIGHT TEXT HERE */}
                       <span className={`text-[11px] font-semibold ${stateTextMap[state]}`}>
-                        {state === "RED"
-                          ? `Attend next ${insight.mustAttend}`
-                          : state === "YELLOW"
-                          ? `Can skip ${insight.canSkip}`
-                          : `Safe to skip ${insight.canSkip}`}
+                        {compactInsightText(
+                          insight.status,
+                          insight.canSkip,
+                          insight.mustAttend,
+                        )}
                       </span>
                     </div>
 
@@ -403,10 +428,7 @@ export default function HomePage() {
             if (!subject) return null;
             const stats = computeAttendanceStats(subject, records);
             const insight = computeAttendanceInsight(subject, records);
-            const state = getSubjectState(
-              stats.percentage,
-              subject.minimumRequiredPercentage
-            );
+            const state = insightStatusToDayState(insight.status);
 
             return (
               <div
@@ -456,11 +478,11 @@ export default function HomePage() {
                       </span>
                       {/* 🔥 NEW INSIGHT TEXT HERE */}
                       <span className={`text-[11px] font-semibold ${stateTextMap[state]}`}>
-                        {state === "RED"
-                          ? `Attend next ${insight.mustAttend}`
-                          : state === "YELLOW"
-                          ? `Can skip ${insight.canSkip}`
-                          : `Safe to skip ${insight.canSkip}`}
+                        {compactInsightText(
+                          insight.status,
+                          insight.canSkip,
+                          insight.mustAttend,
+                        )}
                       </span>
                     </div>
 
