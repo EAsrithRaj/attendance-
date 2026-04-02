@@ -68,19 +68,25 @@ function insightStatusToDayState(
   }
 }
 
-function compactInsightText(
-  status: "safe" | "warning" | "danger",
-  canSkip: number,
-  mustAttend: number,
+function compactSkipText(
+  simulatedPercentage: number,
+  minimum: number,
+  target: number,
 ): string {
-  switch (status) {
-    case "safe":
-      return `Goal met! Can skip ${canSkip}`;
-    case "warning":
-      return `Below goal. Can skip ${canSkip} to survive. Attend ${mustAttend} to reach goal.`;
-    case "danger":
-      return `Failing. Attend next ${mustAttend} to survive.`;
-  }
+  const willFail = simulatedPercentage < minimum;
+  if (willFail) return `DO NOT SKIP: Drops you to ${simulatedPercentage.toFixed(1)}%`;
+  if (simulatedPercentage < target) return "Warning: Skipping drops you below target";
+  return "Safe to skip this specific class";
+}
+
+function simulatedState(
+  simulatedPercentage: number,
+  minimum: number,
+  target: number,
+): DayState {
+  if (simulatedPercentage < minimum) return "RED";
+  if (simulatedPercentage < target) return "YELLOW";
+  return "GREEN";
 }
 
 const statusBadge: Record<AttendanceStatus, string> = {
@@ -321,6 +327,14 @@ export default function HomePage() {
             const stats = computeAttendanceStats(subject, records);
             const insight = computeAttendanceInsight(subject, records);
             const state = insightStatusToDayState(insight.status);
+            const minimum = subject.minimumRequiredPercentage;
+            const target = Math.max(subject.targetPercentage ?? minimum, minimum);
+            const simulatedTotal = stats.totalWeighted + slot.weight;
+            const simulatedPercentage =
+              simulatedTotal > 0
+                ? (stats.attendedWeighted / simulatedTotal) * 100
+                : 0;
+            const simState = simulatedState(simulatedPercentage, minimum, target);
 
             return (
               <div
@@ -370,13 +384,8 @@ export default function HomePage() {
                       <span className={`text-2xl font-bold font-mono ${stateColorMap[state]}`}>
                         {stats.percentage.toFixed(1)}%
                       </span>
-                      {/* 🔥 NEW INSIGHT TEXT HERE */}
-                      <span className={`text-[11px] font-semibold ${stateTextMap[state]}`}>
-                        {compactInsightText(
-                          insight.status,
-                          insight.canSkip,
-                          insight.mustAttend,
-                        )}
+                      <span className={`text-[11px] font-semibold ${stateTextMap[simState]}`}>
+                        {compactSkipText(simulatedPercentage, minimum, target)}
                       </span>
                     </div>
 

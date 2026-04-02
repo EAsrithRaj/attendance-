@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAppState } from "@/context/AppContext";
+import { calculateGlobalStats } from "@/engine/attendanceEngine";
 
 type GlobalBand = "goal" | "surviving" | "risk";
 
@@ -27,53 +28,27 @@ export default function OverallAttendance() {
   const stats = useMemo(() => {
     if (subjects.length === 0) return null;
 
-    let totalWeighted = 0;
-    let attendedWeighted = 0;
-
     const semRecords = records.filter(
       (r) => r.date >= semester.startDate && r.date <= semester.endDate,
     );
 
-    for (const rec of semRecords) {
-      if (rec.status === "CANCELLED") continue;
-      totalWeighted += rec.weightSnapshot;
-      if (rec.status === "PRESENT") {
-        attendedWeighted += rec.weightSnapshot;
-      }
-    }
-
-    const globalPercentage =
-      totalWeighted > 0
-        ? Math.min(100, Math.max(0, (attendedWeighted / totalWeighted) * 100))
-        : 0;
-
-    const globalMinimum =
-      subjects.reduce((acc, s) => acc + s.minimumRequiredPercentage, 0) /
-      subjects.length;
-
-    const globalTarget =
-      subjects.reduce(
-        (acc, s) => acc + (s.targetPercentage ?? s.minimumRequiredPercentage),
-        0,
-      ) / subjects.length;
+    const global = calculateGlobalStats(subjects, semRecords);
 
     let band: GlobalBand;
-    if (globalPercentage >= globalTarget) {
+    if (global.percentage >= global.weightedTarget) {
       band = "goal";
-    } else if (globalPercentage >= globalMinimum) {
+    } else if (global.percentage >= global.weightedMinimum) {
       band = "surviving";
     } else {
       band = "risk";
     }
 
-    const hasData = totalWeighted > 0;
+    const hasData = global.totalPossibleWeighted > 0;
 
     return {
-      totalWeighted,
-      attendedWeighted,
-      percentage: globalPercentage,
-      globalMinimum,
-      globalTarget,
+      totalWeighted: global.totalPossibleWeighted,
+      attendedWeighted: global.totalAttendedWeighted,
+      percentage: global.percentage,
       band,
       hasData,
     };
@@ -94,14 +69,14 @@ export default function OverallAttendance() {
             {stats.percentage.toFixed(1)}%
           </p>
           <p className="text-sm text-muted-foreground font-mono">
-            {stats.attendedWeighted} / {stats.totalWeighted} classes attended
+            Semester progress: {stats.attendedWeighted} / {stats.totalWeighted} units
           </p>
         </>
       ) : (
         <>
           <p className="text-3xl font-bold font-mono text-muted-foreground">—</p>
           <p className="text-sm text-muted-foreground font-mono">
-            0 / 0 classes attended
+            Semester progress: 0 / 0 units
           </p>
         </>
       )}

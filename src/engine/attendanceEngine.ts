@@ -59,6 +59,66 @@ export function computeAttendanceStats(
   };
 }
 
+export interface GlobalAttendanceStats {
+  totalAttendedWeighted: number;
+  totalPossibleWeighted: number;
+  percentage: number;
+  weightedMinimum: number;
+  weightedTarget: number;
+}
+
+export function calculateGlobalStats(
+  subjects: Subject[],
+  records: AttendanceRecord[],
+): GlobalAttendanceStats {
+  if (subjects.length === 0) {
+    return {
+      totalAttendedWeighted: 0,
+      totalPossibleWeighted: 0,
+      percentage: 0,
+      weightedMinimum: 0,
+      weightedTarget: 0,
+    };
+  }
+
+  let totalAttendedWeighted = 0;
+  let totalPossibleWeighted = 0;
+  let weightedMinNumerator = 0;
+  let weightedTargetNumerator = 0;
+
+  for (const subject of subjects) {
+    const stats = computeAttendanceStats(subject, records);
+    const subjectWeight = stats.totalWeighted;
+    const subjectTarget = Math.max(
+      subject.targetPercentage ?? subject.minimumRequiredPercentage,
+      subject.minimumRequiredPercentage,
+    );
+
+    totalAttendedWeighted += stats.attendedWeighted;
+    totalPossibleWeighted += subjectWeight;
+    weightedMinNumerator += subject.minimumRequiredPercentage * subjectWeight;
+    weightedTargetNumerator += subjectTarget * subjectWeight;
+  }
+
+  const percentage =
+    totalPossibleWeighted > 0
+      ? Math.min(100, Math.max(0, (totalAttendedWeighted / totalPossibleWeighted) * 100))
+      : 0;
+
+  const weightedMinimum =
+    totalPossibleWeighted > 0 ? weightedMinNumerator / totalPossibleWeighted : 0;
+  const weightedTarget =
+    totalPossibleWeighted > 0 ? weightedTargetNumerator / totalPossibleWeighted : 0;
+
+  return {
+    totalAttendedWeighted,
+    totalPossibleWeighted,
+    percentage,
+    weightedMinimum,
+    weightedTarget,
+  };
+}
+
 /**
  * Forward simulation: find minimum consecutive PRESENT classes (weight=1 each)
  * needed to reach targetPercentage.
