@@ -62,7 +62,7 @@ export function computeAttendanceStats(
 export interface GlobalAttendanceStats {
   totalAttendedWeighted: number;
   totalPossibleWeighted: number;
-  percentage: number;
+  percentage: number | null;
   weightedMinimum: number;
   weightedTarget: number;
 }
@@ -70,12 +70,15 @@ export interface GlobalAttendanceStats {
 export function calculateGlobalStats(
   subjects: Subject[],
   records: AttendanceRecord[],
+  timetable: TimetableSlot[] = [],
 ): GlobalAttendanceStats {
+  const EPS = 1e-6;
+
   if (subjects.length === 0) {
     return {
       totalAttendedWeighted: 0,
       totalPossibleWeighted: 0,
-      percentage: 0,
+      percentage: null,
       weightedMinimum: 0,
       weightedTarget: 0,
     };
@@ -83,32 +86,41 @@ export function calculateGlobalStats(
 
   let totalAttendedWeighted = 0;
   let totalPossibleWeighted = 0;
+  let totalStableWeight = 0;
   let weightedMinNumerator = 0;
   let weightedTargetNumerator = 0;
 
   for (const subject of subjects) {
     const stats = computeAttendanceStats(subject, records);
-    const subjectWeight = stats.totalWeighted;
-    const subjectTarget = Math.max(
-      subject.targetPercentage ?? subject.minimumRequiredPercentage,
-      subject.minimumRequiredPercentage,
-    );
-
     totalAttendedWeighted += stats.attendedWeighted;
-    totalPossibleWeighted += subjectWeight;
-    weightedMinNumerator += subject.minimumRequiredPercentage * subjectWeight;
-    weightedTargetNumerator += subjectTarget * subjectWeight;
+    totalPossibleWeighted += stats.totalWeighted;
+
+    const stableWeight = timetable
+      .filter((slot) => slot.subjectId === subject.id)
+      .reduce((sum, slot) => sum + slot.weight, 0);
+    if (stableWeight <= EPS) {
+      continue;
+    }
+
+    const subjectTarget =
+      subject.targetPercentage ?? subject.minimumRequiredPercentage;
+    totalStableWeight += stableWeight;
+    weightedMinNumerator += subject.minimumRequiredPercentage * stableWeight;
+    weightedTargetNumerator += subjectTarget * stableWeight;
   }
 
   const percentage =
-    totalPossibleWeighted > 0
-      ? Math.min(100, Math.max(0, (totalAttendedWeighted / totalPossibleWeighted) * 100))
-      : 0;
+    totalPossibleWeighted > EPS
+      ? Math.min(
+          100,
+          Math.max(0, (totalAttendedWeighted / totalPossibleWeighted) * 100),
+        )
+      : null;
 
   const weightedMinimum =
-    totalPossibleWeighted > 0 ? weightedMinNumerator / totalPossibleWeighted : 0;
+    totalStableWeight > EPS ? weightedMinNumerator / totalStableWeight : 0;
   const weightedTarget =
-    totalPossibleWeighted > 0 ? weightedTargetNumerator / totalPossibleWeighted : 0;
+    totalStableWeight > EPS ? weightedTargetNumerator / totalStableWeight : 0;
 
   return {
     totalAttendedWeighted,
