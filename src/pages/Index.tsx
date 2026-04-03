@@ -3,6 +3,7 @@ import { useAppState } from "@/context/AppContext";
 import {
   computeAttendanceStats,
   computeAttendanceInsight,
+  computeBunkBudget,
 } from "@/engine/attendanceEngine";
 import type { AttendanceStatus, DayState, Holiday } from "@/types/attendance";
 import PageShell from "@/components/PageShell";
@@ -106,6 +107,7 @@ export default function HomePage() {
     subjects,
     timetable,
     records,
+    timetable,
     allHolidays,
     holidays,
     examPeriods,
@@ -139,6 +141,7 @@ export default function HomePage() {
 
   const extraRecords = records.filter((r) => r.date === selectedDate && r.isExtra);
   const subjectMap = new Map(subjects.map((s) => [s.id, s]));
+  const budget = computeBunkBudget(subjects, records, timetable);
 
   const getRecord = (subjectId: string, slotId: string) =>
     records.find(
@@ -327,14 +330,16 @@ export default function HomePage() {
             const stats = computeAttendanceStats(subject, records);
             const insight = computeAttendanceInsight(subject, records);
             const state = insightStatusToDayState(insight.status);
-            const minimum = subject.minimumRequiredPercentage;
-            const target = Math.max(subject.targetPercentage ?? minimum, minimum);
-            const simulatedTotal = stats.totalWeighted + slot.weight;
-            const simulatedPercentage =
-              simulatedTotal > 0
-                ? (stats.attendedWeighted / simulatedTotal) * 100
-                : 0;
-            const simState = simulatedState(simulatedPercentage, minimum, target);
+            const target = Math.max(
+              subject.targetPercentage ?? subject.minimumRequiredPercentage,
+              subject.minimumRequiredPercentage,
+            );
+            const simSubTotal = stats.totalWeighted + slot.weight;
+            const simSubPercentage =
+              simSubTotal > 0 ? (stats.attendedWeighted / simSubTotal) * 100 : 100;
+            const failsSubject =
+              simSubPercentage + 1e-6 < subject.minimumRequiredPercentage;
+            const failsGlobal = budget === null ? true : budget.units < slot.weight;
 
             return (
               <div
@@ -384,8 +389,20 @@ export default function HomePage() {
                       <span className={`text-2xl font-bold font-mono ${stateColorMap[state]}`}>
                         {stats.percentage.toFixed(1)}%
                       </span>
-                      <span className={`text-[11px] font-semibold ${stateTextMap[simState]}`}>
-                        {compactSkipText(simulatedPercentage, minimum, target)}
+                      <span
+                        className={`text-[11px] ${
+                          failsSubject || failsGlobal
+                            ? "text-red-600 font-bold"
+                            : simSubPercentage + 1e-6 < target
+                            ? "text-yellow-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {failsSubject || failsGlobal
+                          ? "🚫 DO NOT SKIP"
+                          : simSubPercentage + 1e-6 < target
+                          ? "⚠️ Warning: Below Target"
+                          : "✅ Safe to skip"}
                       </span>
                     </div>
 
