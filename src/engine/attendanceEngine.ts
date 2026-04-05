@@ -31,7 +31,6 @@ export function computeAttendanceStats(
   const percentage =
     totalWeighted > 0 ? (attendedWeighted / totalWeighted) * 100 : 100;
 
-  // Bunk buffer: max classes you can skip and still be at minimum
   const requiredFraction = subject.minimumRequiredPercentage / 100;
   const maxBunkable =
     totalWeighted > 0 && requiredFraction > 0
@@ -41,7 +40,6 @@ export function computeAttendanceStats(
         )
       : 0;
 
-  // Must-attend-next via forward simulation
   const yellowThreshold = subject.minimumRequiredPercentage + 3;
   const mustAttendNext = computeMustAttendNext(
     totalWeighted,
@@ -102,8 +100,12 @@ export function calculateGlobalStats(
       continue;
     }
 
-    const subjectTarget =
-      subject.targetPercentage ?? subject.minimumRequiredPercentage;
+    // FIX: Consistent target calculation
+    const subjectTarget = Math.max(
+      subject.targetPercentage ?? subject.minimumRequiredPercentage,
+      subject.minimumRequiredPercentage
+    );
+    
     totalStableWeight += stableWeight;
     weightedMinNumerator += subject.minimumRequiredPercentage * stableWeight;
     weightedTargetNumerator += subjectTarget * stableWeight;
@@ -131,10 +133,6 @@ export function calculateGlobalStats(
   };
 }
 
-/**
- * Forward simulation: find minimum consecutive PRESENT classes (weight=1 each)
- * needed to reach targetPercentage.
- */
 function computeMustAttendNext(
   totalWeighted: number,
   attendedWeighted: number,
@@ -145,11 +143,9 @@ function computeMustAttendNext(
   let a = attendedWeighted;
   let count = 0;
 
-  // Already above target
   if (t > 0 && a / t >= target) return 0;
   if (t === 0) return 0;
 
-  // Simulate adding one class at a time (weight 1)
   while (count < 1000) {
     t += 1;
     a += 1;
@@ -180,8 +176,6 @@ export function getSubjectState(percentage: number, minimum: number): DayState {
   return "GREEN";
 }
 
-// ── Predictive attendance insight ─────────────────────────────────────────────
-
 export interface AttendanceInsight {
   percentage: number;
   required: number;
@@ -190,10 +184,6 @@ export interface AttendanceInsight {
   status: "safe" | "warning" | "danger";
 }
 
-/**
- * Minimum weighted classes (weight 1 each) needed so that
- * (p + x) / (t + x) >= threshold/100.
- */
 function mustAttendToReachThreshold(
   t: number,
   p: number,
@@ -206,14 +196,6 @@ function mustAttendToReachThreshold(
   return Math.max(0, Math.ceil((thresholdPercent * t - p * 100) / denominator));
 }
 
-/**
- * Computes a predictive insight for a subject (target goal vs survival minimum):
- * - safe: at or above target — skips until falling below target
- * - warning: at or above minimum but below target — survival skips + classes to reach goal
- * - danger: below minimum — classes needed to reach minimum
- *
- * Uses closed-form algebra — no simulation loops.
- */
 export function computeAttendanceInsight(
   subject: Subject,
   records: AttendanceRecord[],
@@ -267,4 +249,168 @@ export function computeAttendanceInsight(
   }
 
   return { percentage, required, canSkip, mustAttend, status };
+}
+
+export type BunkBudgetResult = {
+  units: number;
+  limitSource: string;
+} | null;
+
+export function computeBunkBudget(
+  subjects: Subject[],
+  records: AttendanceRecord[],
+  timetable: TimetableSlot[]
+): BunkBudgetResult {
+  const EPS = 1e-6;
+  const global = calculateGlobalStats(subjects, records, timetable);
+
+  if (global.percentage === null || global.totalPossibleWeighted === 0) {
+    return null;
+  }
+
+  const globalM = global.weightedMinimum / 100;
+  const globalA = global.totalAttendedWeighted;
+  const globalT = global.totalPossibleWeighted;
+
+  let globalUnits = 0;
+  if (globalA / globalT + EPS >= globalM) {
+    globalUnits = Math.floor((globalA / globalM) - globalT + EPS);
+  }
+
+  let minUnits = globalUnits;
+  let limitSource = "Overall Attendance";
+
+  for (const subject of subjects) {
+    const stats = computeAttendanceStats(subject, records);
+    if (stats.totalWeighted === 0) continue;
+
+    const subM = subject.minimumRequiredPercentage / 100;
+    const subA = stats.attendedWeighted;
+    const subT = stats.totalWeighted;
+
+    let subUnits = 0;
+    if (subA / subT + EPS >= subM) {
+      subUnits = Math.floor((subA / subM) - subT + EPS);
+    }
+
+    if (subUnits < minUnits) {
+      minUnits = subUnits;
+      limitSource = subject.name;
+    }
+  }
+
+  return {
+    units: Math.max(0, minUnits),
+    limitSource,
+  };
+}
+
+export type SkipDecision = {
+  date: string; // YYYY-MM-DD
+  subjectId: string;
+  slotId: string;
+  skip: boolean;
+};
+
+export interface DailySimulationState {
+  date: string;
+  globalPercentage: number | null;
+  budgetUnits: number | null;
+  limitSource: string | null;
+}
+
+export interface SimulationResult {
+  final: {
+    global: GlobalAttendanceStats;
+    subjects: { id: string; stats: AttendanceStats }[];
+  };
+  timeline: DailySimulationState[];
+  firstFailureDate: string | null;
+}
+
+export function simulateFutureAttendance(
+  subjects: Subject[],
+  records: AttendanceRecord[],
+  timetable: TimetableSlot[],
+  startDate: string,
+  endDate: string,
+  decisions: SkipDecision[],
+): SimulationResult {
+  const simulatedRecords = [...records];
+  const timeline: DailySimulationState[] = [];
+  let firstFailureDate: string | null = null;
+
+  const current = new Date(startDate);
+  const end = new Date(endDate);
+
+  const decisionMap = new Map(
+    decisions.map(d => [`${d.date}-${d.subjectId}-${d.slotId}`, d])
+  );
+
+  // FIX: O(1) Map lookup for records to prevent O(n^2) scaling issues
+  const recordMap = new Map(
+    simulatedRecords.map(r => [`${r.date}-${r.subjectId}-${r.slotId}`, r])
+  );
+
+  while (current <= end) {
+    const rawDay = current.getDay();
+    const dayOfWeek = rawDay === 0 ? 7 : rawDay;
+    
+    // FIX: Timezone safe date parsing (en-CA forces YYYY-MM-DD locally)
+    const dateStr = current.toLocaleDateString("en-CA");
+    
+    const dailySlots = timetable.filter((s) => s.dayOfWeek === dayOfWeek);
+
+    for (const slot of dailySlots) {
+      const key = `${dateStr}-${slot.subjectId}-${slot.id}`;
+      const decision = decisionMap.get(key);
+      const existing = recordMap.get(key);
+
+      if (existing) {
+        existing.status = decision?.skip ? "ABSENT" : "PRESENT";
+        existing.weightSnapshot = slot.weight;
+      } else {
+        const newRecord: AttendanceRecord = {
+          id: `sim-${dateStr}-${slot.id}`,
+          subjectId: slot.subjectId,
+          slotId: slot.id,
+          date: dateStr,
+          status: decision?.skip ? "ABSENT" : "PRESENT",
+          weightSnapshot: slot.weight,
+          isExtra: false,
+          timestamp: new Date(dateStr).getTime(),
+        };
+        simulatedRecords.push(newRecord);
+        recordMap.set(key, newRecord);
+      }
+    }
+
+    const globalStats = calculateGlobalStats(subjects, simulatedRecords, timetable);
+    const dailyBudget = computeBunkBudget(subjects, simulatedRecords, timetable);
+
+    if (firstFailureDate === null && dailyBudget && dailyBudget.units === 0) {
+      firstFailureDate = dateStr;
+    }
+
+    timeline.push({
+      date: dateStr,
+      globalPercentage: globalStats.percentage,
+      budgetUnits: dailyBudget ? dailyBudget.units : null,
+      limitSource: dailyBudget ? dailyBudget.limitSource : null,
+    });
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return {
+    final: {
+      global: calculateGlobalStats(subjects, simulatedRecords, timetable),
+      subjects: subjects.map((s) => ({
+        id: s.id,
+        stats: computeAttendanceStats(s, simulatedRecords),
+      })),
+    },
+    timeline,
+    firstFailureDate,
+  };
 }
