@@ -340,8 +340,8 @@ export function simulateFutureAttendance(
   const timeline: DailySimulationState[] = [];
   let firstFailureDate: string | null = null;
 
-  const current = new Date(startDate);
-  const end = new Date(endDate);
+  const current = new Date(startDate.replace(/-/g, '/'));
+  const end = new Date(endDate.replace(/-/g, '/'));
 
   const decisionMap = new Map(
     decisions.map(d => [`${d.date}-${d.subjectId}-${d.slotId}`, d])
@@ -378,7 +378,7 @@ export function simulateFutureAttendance(
           status: decision?.skip ? "ABSENT" : "PRESENT",
           weightSnapshot: slot.weight,
           isExtra: false,
-          timestamp: new Date(dateStr).getTime(),
+          timestamp: current.getTime(),
         };
         simulatedRecords.push(newRecord);
         recordMap.set(key, newRecord);
@@ -429,8 +429,8 @@ export function computeOptimalSkipPlanBnB(
 ): OptimalSkipPlan {
   // 1. Build future slots
   const futureSlots: { date: string; slot: TimetableSlot }[] = [];
-  let current = new Date(startDate);
-  const end = new Date(endDate);
+  let current = new Date(startDate.replace(/-/g, '/'));
+  const end = new Date(endDate.replace(/-/g, '/'));
 
   while (current <= end) {
     const rawDay = current.getDay();
