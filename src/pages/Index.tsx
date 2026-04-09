@@ -104,10 +104,9 @@ const statusBadgeLabel: Record<AttendanceStatus, string> = {
 
 export default function HomePage() {
   const {
-    subjects,
-    timetable,
-    records,
-    timetable,
+    subjects = [],
+    timetable = [],
+    records = [],
     allHolidays,
     holidays,
     examPeriods,
@@ -141,7 +140,14 @@ export default function HomePage() {
 
   const extraRecords = records.filter((r) => r.date === selectedDate && r.isExtra);
   const subjectMap = new Map(subjects.map((s) => [s.id, s]));
-  const budget = computeBunkBudget(subjects, records, timetable);
+  let budget = null;
+  try {
+    if (subjects.length > 0 && timetable.length > 0) {
+      budget = computeBunkBudget(subjects, records, timetable);
+    }
+  } catch (e) {
+    console.error("Budget calculation failed:", e);
+  }
 
   const getRecord = (subjectId: string, slotId: string) =>
     records.find(

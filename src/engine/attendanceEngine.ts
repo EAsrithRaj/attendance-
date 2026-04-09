@@ -414,3 +414,110 @@ export function simulateFutureAttendance(
     firstFailureDate,
   };
 }
+
+export interface OptimalSkipPlan {
+  decisions: SkipDecision[];
+  totalWeightSaved: number;
+}
+
+export function computeOptimalSkipPlanBnB(
+  subjects: Subject[],
+  records: AttendanceRecord[],
+  timetable: TimetableSlot[],
+  startDate: string,
+  endDate: string
+): OptimalSkipPlan {
+  // 1. Build future slots
+  const futureSlots: { date: string; slot: TimetableSlot }[] = [];
+  let current = new Date(startDate);
+  const end = new Date(endDate);
+
+  while (current <= end) {
+    const rawDay = current.getDay();
+    const dayOfWeek = rawDay === 0 ? 7 : rawDay;
+    const dateStr = current.toLocaleDateString("en-CA");
+
+    const dailySlots = timetable.filter(s => s.dayOfWeek === dayOfWeek);
+    for (const slot of dailySlots) {
+      futureSlots.push({ date: dateStr, slot });
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  // 2. Heuristic: try lighter slots first to build high lower-bounds quickly
+  futureSlots.sort((a, b) => a.slot.weight - b.slot.weight);
+
+  let bestWeight = 0;
+  let bestDecisions: SkipDecision[] = [];
+
+  // 3. Precompute suffix max weights for DFS pruning
+  const suffixMax: number[] = new Array(futureSlots.length).fill(0);
+  for (let i = futureSlots.length - 1; i >= 0; i--) {
+    suffixMax[i] =
+      futureSlots[i].slot.weight +
+      (i + 1 < futureSlots.length ? suffixMax[i + 1] : 0);
+  }
+
+  // 4. Branch and Bound DFS
+  function dfs(
+    index: number,
+    decisions: SkipDecision[],
+    currentWeight: number
+  ) {
+    // PRUNE: If current weight + all remaining possible weight can't beat the best, kill branch
+    if (
+      index < futureSlots.length &&
+      currentWeight + suffixMax[index] <= bestWeight
+    ) {
+      return;
+    }
+
+    // BASE CASE: Reached the end
+    if (index === futureSlots.length) {
+      if (currentWeight > bestWeight) {
+        bestWeight = currentWeight;
+        bestDecisions = [...decisions];
+      }
+      return;
+    }
+
+    const { date, slot } = futureSlots[index];
+
+    // --- BRANCH A: Try SKIP ---
+    const skipDecision: SkipDecision = {
+      date,
+      subjectId: slot.subjectId,
+      slotId: slot.id,
+      skip: true
+    };
+
+    decisions.push(skipDecision);
+
+    // Oracle Check
+    const sim = simulateFutureAttendance(
+      subjects,
+      records,
+      timetable,
+      startDate,
+      endDate,
+      decisions
+    );
+
+    if (sim.firstFailureDate === null) {
+      dfs(index + 1, decisions, currentWeight + slot.weight);
+    }
+
+    // Backtrack
+    decisions.pop();
+
+    // --- BRANCH B: Try NOT SKIP ---
+    dfs(index + 1, decisions, currentWeight);
+  }
+
+  dfs(0, [], 0);
+
+  return {
+    decisions: bestDecisions,
+    totalWeightSaved: bestWeight
+  };
+}
