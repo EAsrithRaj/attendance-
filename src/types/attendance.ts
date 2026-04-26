@@ -1,9 +1,18 @@
+export interface SubjectAdjustment {
+  offset?: number;
+  baseline?: {
+    attended: number;
+    total: number;
+  };
+}
+
 export interface Subject {
   id: string;
   name: string;
   minimumRequiredPercentage: number;
   /** Optional goal; if omitted, engine uses `minimumRequiredPercentage`. */
   targetPercentage?: number;
+  adjustment?: SubjectAdjustment;
 }
 
 export interface TimetableSlot {

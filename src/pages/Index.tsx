@@ -5,9 +5,10 @@ import {
   computeAttendanceInsight,
   computeBunkBudget,
 } from "@/engine/attendanceEngine";
-import type { AttendanceStatus, DayState, Holiday } from "@/types/attendance";
+import type { AttendanceStatus, DayState, Holiday, Subject } from "@/types/attendance";
 import PageShell from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -90,21 +91,27 @@ function simulatedState(
   return "GREEN";
 }
 
+function compactInsightText(status: string, canSkip: number, mustAttend: number) {
+  if (status === "safe") return `Safe to skip ${canSkip}`;
+  if (status === "warning") return `Warning: Attend ${mustAttend}`;
+  return `Danger: Attend ${mustAttend}`;
+}
+
 const statusBadge: Record<AttendanceStatus, string> = {
-  PRESENT:   "bg-green-100  text-green-700  dark:bg-green-900/40  dark:text-green-400",
-  ABSENT:    "bg-red-100    text-red-700    dark:bg-red-900/40    dark:text-red-400",
+  PRESENT: "bg-green-100  text-green-700  dark:bg-green-900/40  dark:text-green-400",
+  ABSENT: "bg-red-100    text-red-700    dark:bg-red-900/40    dark:text-red-400",
   CANCELLED: "bg-gray-100   text-gray-600   dark:bg-gray-800      dark:text-gray-400",
 };
 
 const statusBadgeLabel: Record<AttendanceStatus, string> = {
-  PRESENT:   "Present",
-  ABSENT:    "Absent",
+  PRESENT: "Present",
+  ABSENT: "Absent",
   CANCELLED: "Cancelled",
 };
 
 export default function HomePage() {
   const {
-    subjects = [],
+    subjects: rawSubjects = [],
     timetable = [],
     records = [],
     allHolidays,
@@ -118,11 +125,21 @@ export default function HomePage() {
     setHolidays,
     loadTestData,
     selectedDate,
+    setSubjectOffset,
+    setSubjectBaseline,
+    resetSubjectAdjustment,
   } = useAppState();
+
+  const subjects = rawSubjects as Subject[];
 
   const dow = getDayOfWeek(selectedDate);
   const [extraModalOpen, setExtraModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Holiday | null>(null);
+
+  const [editSubject, setEditSubject] = useState<Subject | null>(null);
+  const [offsetVal, setOffsetVal] = useState("");
+  const [baselineAttended, setBaselineAttended] = useState("");
+  const [baselineTotal, setBaselineTotal] = useState("");
 
   const todayHoliday = allHolidays.find((h) => h.date === selectedDate) ?? null;
   const isHoliday = todayHoliday !== null;
@@ -264,13 +281,12 @@ export default function HomePage() {
         {!isHoliday && !isExam && subjectStats.length > 0 && (
           <div className="text-right">
             <p
-              className={`text-sm font-bold ${
-                todayStatus === "danger"
-                  ? "text-red-500"
-                  : todayStatus === "warning"
+              className={`text-sm font-bold ${todayStatus === "danger"
+                ? "text-red-500"
+                : todayStatus === "warning"
                   ? "text-yellow-500"
                   : "text-green-500"
-              }`}
+                }`}
             >
               {statusConfig[todayStatus].title}
             </p>
@@ -323,9 +339,8 @@ export default function HomePage() {
 
       {/* ── Subject cards ─────────────────────────────────── */}
       <div
-        className={`flex flex-col gap-4 animate-fade-in transition-opacity ${
-          isHoliday ? "opacity-40 pointer-events-none select-none" : ""
-        }`}
+        className={`flex flex-col gap-4 animate-fade-in transition-opacity ${isHoliday ? "opacity-40 pointer-events-none select-none" : ""
+          }`}
       >
         {/* Timetable slots */}
         {!isExam &&
@@ -392,23 +407,22 @@ export default function HomePage() {
                     </div>
 
                     <div className="flex flex-col items-end leading-tight">
-                      <span className={`text-2xl font-bold font-mono ${stateColorMap[state]}`}>
+                      <span className={`text-2xl font-bold font-mono ${stateColorMap[state]} cursor-pointer hover:opacity-80`} onClick={() => setEditSubject(subject)}>
                         {stats.percentage.toFixed(1)}%
                       </span>
                       <span
-                        className={`text-[11px] ${
-                          failsSubject || failsGlobal
-                            ? "text-red-600 font-bold"
-                            : simSubPercentage + 1e-6 < target
+                        className={`text-[11px] ${failsSubject || failsGlobal
+                          ? "text-red-600 font-bold"
+                          : simSubPercentage + 1e-6 < target
                             ? "text-yellow-600"
                             : "text-green-600"
-                        }`}
+                          }`}
                       >
                         {failsSubject || failsGlobal
                           ? "🚫 DO NOT SKIP"
                           : simSubPercentage + 1e-6 < target
-                          ? "⚠️ Warning: Below Target"
-                          : "✅ Safe to skip"}
+                            ? "⚠️ Warning: Below Target"
+                            : "✅ Safe to skip"}
                       </span>
                     </div>
 
@@ -429,9 +443,8 @@ export default function HomePage() {
                     {record?.status === "PRESENT" ? "Present ✓" : "Mark Present"}
                   </Button>
                   <Button
-                    className={`h-12 px-3 active:scale-95 transition-all duration-150 ${
-                      record?.status === "ABSENT" ? "border-red-500 text-red-600 bg-red-50" : "text-red-500 border-red-200"
-                    }`}
+                    className={`h-12 px-3 active:scale-95 transition-all duration-150 ${record?.status === "ABSENT" ? "border-red-500 text-red-600 bg-red-50" : "text-red-500 border-red-200"
+                      }`}
                     variant="outline"
                     disabled={record?.status === "ABSENT"}
                     onClick={() => mark(slot.subjectId, slot.id, slot.weight, "ABSENT")}
@@ -439,9 +452,8 @@ export default function HomePage() {
                     ✕
                   </Button>
                   <Button
-                    className={`h-12 px-3 active:scale-95 transition-all duration-150 ${
-                      record?.status === "CANCELLED" ? "bg-gray-100" : "text-gray-500"
-                    }`}
+                    className={`h-12 px-3 active:scale-95 transition-all duration-150 ${record?.status === "CANCELLED" ? "bg-gray-100" : "text-gray-500"
+                      }`}
                     variant="ghost"
                     disabled={record?.status === "CANCELLED"}
                     onClick={() => mark(slot.subjectId, slot.id, slot.weight, "CANCELLED")}
@@ -505,7 +517,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="flex flex-col items-end leading-tight">
-                      <span className={`text-2xl font-bold font-mono ${stateColorMap[state]}`}>
+                      <span className={`text-2xl font-bold font-mono ${stateColorMap[state]} cursor-pointer hover:opacity-80`} onClick={() => setEditSubject(subject)}>
                         {stats.percentage.toFixed(1)}%
                       </span>
                       {/* 🔥 NEW INSIGHT TEXT HERE */}
@@ -538,9 +550,8 @@ export default function HomePage() {
 
                   {/* SECONDARY */}
                   <Button
-                    className={`h-12 px-3 active:scale-95 transition-all duration-150 ${
-                      rec.status === "ABSENT" ? "border-red-500 text-red-600 bg-red-50" : "text-red-500 border-red-200"
-                    }`}
+                    className={`h-12 px-3 active:scale-95 transition-all duration-150 ${rec.status === "ABSENT" ? "border-red-500 text-red-600 bg-red-50" : "text-red-500 border-red-200"
+                      }`}
                     variant="outline"
                     disabled={rec.status === "ABSENT"}
                     onClick={() => mark(rec.subjectId, rec.slotId, rec.weightSnapshot, "ABSENT")}
@@ -550,9 +561,8 @@ export default function HomePage() {
 
                   {/* CANCEL */}
                   <Button
-                    className={`h-12 px-3 active:scale-95 transition-all duration-150 ${
-                      rec.status === "CANCELLED" ? "bg-gray-100" : "text-gray-500"
-                    }`}
+                    className={`h-12 px-3 active:scale-95 transition-all duration-150 ${rec.status === "CANCELLED" ? "bg-gray-100" : "text-gray-500"
+                      }`}
                     variant="ghost"
                     disabled={rec.status === "CANCELLED"}
                     onClick={() => mark(rec.subjectId, rec.slotId, rec.weightSnapshot, "CANCELLED")}
@@ -608,6 +618,95 @@ export default function HomePage() {
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={editSubject !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setEditSubject(null);
+            setOffsetVal("");
+            setBaselineAttended("");
+            setBaselineTotal("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adjust Attendance: {editSubject?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-6 py-4">
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">Mode 1: Direct Offset</h4>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  placeholder="e.g. 5 or -2"
+                  value={offsetVal}
+                  onChange={(e) => setOffsetVal(e.target.value)}
+                />
+                <Button
+                  onClick={() => {
+                    if (editSubject && offsetVal) {
+                      setSubjectOffset(editSubject.id, parseFloat(offsetVal));
+                      setEditSubject(null);
+                      setOffsetVal("");
+                    }
+                  }}
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">Mode 2: Set Baseline (Anchor)</h4>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  placeholder="Attended"
+                  value={baselineAttended}
+                  onChange={(e) => setBaselineAttended(e.target.value)}
+                />
+                <span className="text-muted-foreground">/</span>
+                <Input
+                  type="number"
+                  placeholder="Total"
+                  value={baselineTotal}
+                  onChange={(e) => setBaselineTotal(e.target.value)}
+                />
+                <Button
+                  onClick={() => {
+                    if (editSubject && baselineAttended && baselineTotal) {
+                      setSubjectBaseline(editSubject.id, parseFloat(baselineAttended), parseFloat(baselineTotal));
+                      setEditSubject(null);
+                      setBaselineAttended("");
+                      setBaselineTotal("");
+                    }
+                  }}
+                >
+                  Set Baseline
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2 border-t">
+              <h4 className="font-medium text-sm text-muted-foreground">Mode 3: Reset</h4>
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={() => {
+                  if (editSubject) {
+                    resetSubjectAdjustment(editSubject.id);
+                    setEditSubject(null);
+                  }
+                }}
+              >
+                Reset to Raw Data
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </PageShell>

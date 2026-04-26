@@ -28,28 +28,41 @@ export function computeAttendanceStats(
     }
   }
 
-  const percentage =
-    totalWeighted > 0 ? (attendedWeighted / totalWeighted) * 100 : 100;
+  let effectiveAttended = attendedWeighted;
+  let effectiveTotal = totalWeighted;
+  if (subject.adjustment?.baseline) {
+    effectiveAttended += subject.adjustment.baseline.attended;
+    effectiveTotal += subject.adjustment.baseline.total;
+  }
+
+  let percentage =
+    effectiveTotal > 0 ? (effectiveAttended / effectiveTotal) * 100 : 100;
+
+  if (subject.adjustment?.offset) {
+    percentage += subject.adjustment.offset;
+  }
+
+  percentage = Math.max(0, Math.min(100, percentage));
 
   const requiredFraction = subject.minimumRequiredPercentage / 100;
   const maxBunkable =
-    totalWeighted > 0 && requiredFraction > 0
+    effectiveTotal > 0 && requiredFraction > 0
       ? Math.max(
           0,
-          Math.floor(attendedWeighted / requiredFraction - totalWeighted),
+          Math.floor(effectiveAttended / requiredFraction - effectiveTotal),
         )
       : 0;
 
   const yellowThreshold = subject.minimumRequiredPercentage + 3;
   const mustAttendNext = computeMustAttendNext(
-    totalWeighted,
-    attendedWeighted,
+    effectiveTotal,
+    effectiveAttended,
     yellowThreshold,
   );
 
   return {
-    totalWeighted,
-    attendedWeighted,
+    totalWeighted: effectiveTotal,
+    attendedWeighted: effectiveAttended,
     cancelledWeighted,
     percentage: Math.round(percentage * 100) / 100,
     bunkBuffer: maxBunkable,
@@ -378,7 +391,6 @@ export function simulateFutureAttendance(
           status: decision?.skip ? "ABSENT" : "PRESENT",
           weightSnapshot: slot.weight,
           isExtra: false,
-          timestamp: current.getTime(),
         };
         simulatedRecords.push(newRecord);
         recordMap.set(key, newRecord);

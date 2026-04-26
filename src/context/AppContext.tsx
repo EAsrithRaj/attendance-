@@ -111,6 +111,9 @@ interface AppState {
   /** Currently viewed date, controlled by Calendar; Today reads this */
   selectedDate: string;
   setSelectedDate: (d: string) => void;
+  setSubjectOffset: (id: string, offset: number) => void;
+  setSubjectBaseline: (id: string, attended: number, total: number) => void;
+  resetSubjectAdjustment: (id: string) => void;
 }
 
 const defaultSemester: SemesterConfig = { startDate: "2026-01-05", endDate: "2026-05-01" };
@@ -143,6 +146,9 @@ const fallback: AppState = {
   refreshApiHolidays: async () => {},
   selectedDate: getTodayStr(),
   setSelectedDate: () => {},
+  setSubjectOffset: () => {},
+  setSubjectBaseline: () => {},
+  resetSubjectAdjustment: () => {},
 };
 
 const AppContext = createContext<AppState>(fallback);
@@ -197,6 +203,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setHolidays = useCallback((h: Holiday[]) => { _setHolidays(h); saveHolidays(h); }, []);
   const setExamPeriods = useCallback((e: ExamPeriod[]) => { _setExamPeriods(e); saveExamPeriods(e); }, []);
   const setSemester = useCallback((s: SemesterConfig) => { _setSemester(s); saveSemesterConfig(s); }, []);
+
+  const setSubjectOffset = useCallback((id: string, offset: number) => {
+    _setSubjects((prev) => {
+      const next = prev.map((s) => s.id === id ? { ...s, adjustment: { ...s.adjustment, offset } } : s);
+      saveSubjects(next);
+      return next;
+    });
+  }, []);
+
+  const setSubjectBaseline = useCallback((id: string, attended: number, total: number) => {
+    _setSubjects((prev) => {
+      const next = prev.map((s) => s.id === id ? { ...s, adjustment: { ...s.adjustment, baseline: { attended, total } } } : s);
+      saveSubjects(next);
+      return next;
+    });
+  }, []);
+
+  const resetSubjectAdjustment = useCallback((id: string) => {
+    _setSubjects((prev) => {
+      const next = prev.map((s) => {
+        if (s.id === id) {
+          const newSubject = { ...s };
+          delete newSubject.adjustment;
+          return newSubject;
+        }
+        return s;
+      });
+      saveSubjects(next);
+      return next;
+    });
+  }, []);
 
   const deleteAutoHoliday = useCallback((id: string) => {
     _setDeletedHolidayIds((prev) => {
@@ -291,6 +328,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteAutoHoliday, restoreAutoHoliday,
       resetAll, loadTestData, refreshApiHolidays,
       selectedDate, setSelectedDate,
+      setSubjectOffset, setSubjectBaseline, resetSubjectAdjustment,
     }}>
       {children}
     </AppContext.Provider>
